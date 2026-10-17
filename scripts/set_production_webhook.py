@@ -81,25 +81,29 @@ def delete_webhook():
     except Exception as e:
         print(f"[ERROR] Gagal menghubungi Telegram API: {str(e)}")
 
-def set_production_webhook():
+def set_production_webhook(override_url: str = None, override_token: str = None):
     """Mendaftarkan URL webhook produksi ke Telegram API."""
     print("=======================================================")
     print("TATADANA - REGISTRASI WEBHOOK PRODUKSI")
     print("=======================================================")
 
+    bot_token = override_token or TELEGRAM_BOT_TOKEN
+    base_url = override_url or WEBHOOK_BASE_URL
+
     # Validasi Token
-    if not TELEGRAM_BOT_TOKEN:
+    if not bot_token:
         print("\n[ERROR] TELEGRAM_BOT_TOKEN kosong!")
-        print("Pastikan Anda sudah mengisi TELEGRAM_BOT_TOKEN di environment variables atau file .env.")
+        print("Pastikan Anda sudah mengisi TELEGRAM_BOT_TOKEN di file .env atau argumen --token.")
+        print("Contoh: python scripts/set_production_webhook.py --token <BOT_TOKEN_DARI_BOTFATHER>")
         sys.exit(1)
 
     # Validasi URL
-    if not WEBHOOK_BASE_URL:
+    if not base_url:
         print("\n[ERROR] WEBHOOK_BASE_URL kosong!")
-        print("Pastikan Anda sudah mengisi WEBHOOK_BASE_URL (contoh: https://tatadana-production.up.railway.app).")
+        print("Pastikan Anda sudah mengisi WEBHOOK_BASE_URL (contoh: https://web-production-282ac.up.railway.app).")
         sys.exit(1)
 
-    clean_base_url = WEBHOOK_BASE_URL.rstrip("/")
+    clean_base_url = base_url.rstrip("/")
     if not clean_base_url.startswith("https://"):
         print(f"\n[PERINGATAN] Telegram API mewajibkan protokol HTTPS publik!")
         print(f"URL Anda saat ini: {clean_base_url}")
@@ -113,7 +117,7 @@ def set_production_webhook():
                 sys.exit(0)
 
     target_webhook_url = f"{clean_base_url}/api/telegram/webhook"
-    telegram_api_url = f"https://api.telegram.org/bot{TELEGRAM_BOT_TOKEN}/setWebhook"
+    telegram_api_url = f"https://api.telegram.org/bot{bot_token}/setWebhook"
 
     payload = {
         "url": target_webhook_url,
@@ -126,7 +130,7 @@ def set_production_webhook():
 
     print(f"\n[1/2] Menghubungi Telegram API...")
     print(f"• Target Webhook URL: {target_webhook_url}")
-    print(f"• Bot Token         : {mask_token(TELEGRAM_BOT_TOKEN)}")
+    print(f"• Bot Token         : {mask_token(bot_token)}")
 
     try:
         resp = httpx.post(telegram_api_url, json=payload, timeout=20.0)
@@ -151,6 +155,8 @@ def set_production_webhook():
 
 def main():
     parser = argparse.ArgumentParser(description="TataDana Telegram Webhook Manager")
+    parser.add_argument("--url", help="URL domain target webhook (contoh: https://web-production-282ac.up.railway.app)")
+    parser.add_argument("--token", help="Token Bot Telegram dari @BotFather")
     parser.add_argument("--info", action="store_true", help="Cek status webhook saat ini")
     parser.add_argument("--delete", action="store_true", help="Hapus konfigurasi webhook aktif")
     args = parser.parse_args()
@@ -160,7 +166,7 @@ def main():
     elif args.delete:
         delete_webhook()
     else:
-        set_production_webhook()
+        set_production_webhook(override_url=args.url, override_token=args.token)
 
 if __name__ == "__main__":
     main()
