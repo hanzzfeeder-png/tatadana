@@ -348,16 +348,33 @@
     async function handleExport(type) {
         const start = document.getElementById("filter-start-date").value;
         const end = document.getElementById("filter-end-date").value;
+        const category = document.getElementById("filter-category").value;
+        const wallet = document.getElementById("filter-wallet").value;
+        const txType = document.getElementById("filter-type").value;
 
         showToast(`Men-generate laporan ${type.toUpperCase()}...`, "info");
         try {
             const res = await apiCall(`/api/reports/export/${type}`, {
                 method: "POST",
-                body: JSON.stringify({ start_date: start || null, end_date: end || null })
+                body: JSON.stringify({
+                    start_date: start || null,
+                    end_date: end || null,
+                    category_id: category || null,
+                    wallet_id: wallet || null,
+                    type: txType || null
+                })
             });
 
-            showToast("Laporan siap didownload!", "success");
-            window.open(res.download_url, "_blank");
+            showToast("Laporan berhasil dibuat! Memulai download...", "success");
+            
+            // Direct download trigger without pop-up blocker issues
+            const downloadLink = document.createElement("a");
+            downloadLink.href = res.download_url;
+            downloadLink.download = res.file_name;
+            document.body.appendChild(downloadLink);
+            downloadLink.click();
+            document.body.removeChild(downloadLink);
+
             loadExportHistory();
         } catch (err) {
             showToast(err.message, "error");
@@ -379,11 +396,13 @@
                         <div class="text-xs font-bold text-slate-900">${item.file_name}</div>
                         <div class="text-[10px] text-slate-500 mt-0.5">Dibuat: ${item.created_at} (${item.file_type.toUpperCase()})</div>
                     </div>
-                    <a href="${item.storage_url}" target="_blank" class="px-3 py-1.5 rounded-lg text-xs font-bold bg-white text-orange-600 hover:bg-orange-50 border border-slate-200 shadow-sm">
-                        Download
+                    <a href="${item.storage_url}" download="${item.file_name}" class="px-3 py-1.5 rounded-lg text-xs font-bold bg-white text-orange-600 hover:bg-orange-50 border border-slate-200 shadow-sm flex items-center gap-1">
+                        <i data-lucide="download" class="w-3.5 h-3.5"></i>
+                        <span>Download</span>
                     </a>
                 </div>
             `).join('');
+            if (window.lucide) lucide.createIcons();
         } catch (e) {
             container.innerHTML = `<div class="text-xs text-red-500 py-4 text-center">Gagal memuat riwayat: ${e.message}</div>`;
         }

@@ -9,12 +9,46 @@ from reportlab.lib import colors
 from reportlab.lib.pagesizes import A4
 from reportlab.platypus import SimpleDocTemplate, Paragraph, Spacer, Table, TableStyle
 from reportlab.lib.styles import getSampleStyleSheet, ParagraphStyle
+from reportlab.pdfgen import canvas
 
 from app.database import get_db
 from app.config import settings, get_wib_now, get_wib_str, format_wib_display
 
 STORAGE_DIR = os.path.join(os.path.dirname(os.path.dirname(os.path.dirname(__file__))), "storage", "exports")
 os.makedirs(STORAGE_DIR, exist_ok=True)
+
+class NumberedCanvas(canvas.Canvas):
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self._saved_page_states = []
+
+    def showPage(self):
+        self._saved_page_states.append(dict(self.__dict__))
+        self._startPage()
+
+    def save(self):
+        num_pages = len(self._saved_page_states)
+        for state in self._saved_page_states:
+            self.__dict__.update(state)
+            self.draw_page_decorations(num_pages)
+            super().showPage()
+        super().save()
+
+    def draw_page_decorations(self, page_count):
+        self.saveState()
+        self.setFont("Helvetica", 8)
+        self.setFillColor(colors.HexColor("#64748B"))
+        
+        # Bottom divider line
+        self.setStrokeColor(colors.HexColor("#CBD5E1"))
+        self.setLineWidth(0.5)
+        self.line(30, 36, 565, 36)
+        
+        # Footer text & page numbering
+        self.drawString(30, 24, "TataDana — Smart Personal Finance SaaS | Laporan Keuangan Resmi (WIB)")
+        page_text = f"Halaman {self._pageNumber} dari {page_count}"
+        self.drawRightString(565, 24, page_text)
+        self.restoreState()
 
 class ReportService:
     @staticmethod
@@ -213,7 +247,14 @@ class ReportService:
         }
 
     @staticmethod
-    def generate_excel_report(user_id: str, start_date: Optional[str] = None, end_date: Optional[str] = None) -> str:
+    def generate_excel_report(
+        user_id: str,
+        start_date: Optional[str] = None,
+        end_date: Optional[str] = None,
+        category_id: Optional[str] = None,
+        wallet_id: Optional[str] = None,
+        tx_type: Optional[str] = None
+    ) -> str:
         # Check plan
         conn = get_db()
         cursor = conn.cursor()
@@ -234,6 +275,15 @@ class ReportService:
         if end_date:
             where_clauses.append("t.transaction_date <= ?")
             params.append(f"{end_date} 23:59:59")
+        if category_id:
+            where_clauses.append("t.category_id = ?")
+            params.append(category_id)
+        if wallet_id:
+            where_clauses.append("t.wallet_id = ?")
+            params.append(wallet_id)
+        if tx_type:
+            where_clauses.append("t.type = ?")
+            params.append(tx_type)
 
         cursor.execute(f"""
         SELECT t.transaction_date, t.type, t.amount, t.note, t.source, t.receipt_items,
@@ -352,7 +402,14 @@ class ReportService:
         return file_id
 
     @staticmethod
-    def generate_pdf_report(user_id: str, start_date: Optional[str] = None, end_date: Optional[str] = None) -> str:
+    def generate_pdf_report(
+        user_id: str,
+        start_date: Optional[str] = None,
+        end_date: Optional[str] = None,
+        category_id: Optional[str] = None,
+        wallet_id: Optional[str] = None,
+        tx_type: Optional[str] = None
+    ) -> str:
         # Check plan
         conn = get_db()
         cursor = conn.cursor()
@@ -364,15 +421,36 @@ class ReportService:
 
         user_name = p["full_name"]
 
-        # Fetch transactions
+        # Fetch transactions with filters
         where_clauses = ["t.user_id = ?"]
         params = [user_id]
+        filter_descs = []
+
         if start_date:
             where_clauses.append("t.transaction_date >= ?")
             params.append(f"{start_date} 00:00:00")
         if end_date:
             where_clauses.append("t.transaction_date <= ?")
             params.append(f"{end_date} 23:59:59")
+        if category_id:
+            where_clauses.append("t.category_id = ?")
+            params.append(category_id)
+            cursor.execute("SELECT name FROM categories WHERE id = ?", (category_id,))
+            c_row = cursor.fetchone()
+            if c_row:
+                filter_descs.append(f"Kategori: {c_row['name']}")
+        if wallet_id:
+            where_clauses.append("t.wallet_id = ?")
+            params.append(wallet_id)
+            cursor.execute("SELECT name FROM wallets WHERE id = ?", (wallet_id,))
+            w_row = cursor.fetchone()
+            if w_row:
+                filter_descs.append(f"Dompet: {w_row['name']}")
+        if tx_type:
+            where_clauses.append("t.type = ?")
+            params.append(tx_type)
+            type_label = "Pemasukan" if tx_type == "income" else ("Pengeluaran" if tx_type == "expense" else "Transfer")
+            filter_descs.append(f"Jenis: {type_label}")
 
         cursor.execute(f"""
         SELECT t.transaction_date, t.type, t.amount, t.note,
@@ -382,14 +460,21 @@ class ReportService:
         LEFT JOIN categories c ON c.id = t.category_id
         WHERE {" AND ".join(where_clauses)}
         ORDER BY t.transaction_date DESC
-        LIMIT 100
+        LIMIT 500
         """, params)
         rows = cursor.fetchall()
 
         file_id = f"TataDana_Laporan_{datetime.now().strftime('%Y%m%d_%H%M%S')}_{uuid.uuid4().hex[:6]}.pdf"
         file_path = os.path.join(STORAGE_DIR, file_id)
 
-        doc = SimpleDocTemplate(file_path, pagesize=A4, rightMargin=30, leftMargin=30, topMargin=30, bottomMargin=30)
+        doc = SimpleDocTemplate(
+            file_path,
+            pagesize=A4,
+            rightMargin=30,
+            leftMargin=30,
+            topMargin=32,
+            bottomMargin=45
+        )
         styles = getSampleStyleSheet()
         elements = []
 
@@ -398,7 +483,7 @@ class ReportService:
             'TitleStyle',
             parent=styles['Normal'],
             fontName='Helvetica-Bold',
-            fontSize=20,
+            fontSize=18,
             textColor=colors.HexColor('#FF6B00'),
             spaceAfter=4
         )
@@ -406,73 +491,151 @@ class ReportService:
             'SubStyle',
             parent=styles['Normal'],
             fontName='Helvetica',
-            fontSize=9,
+            fontSize=8.5,
+            leading=12,
             textColor=colors.HexColor('#64748B'),
-            spaceAfter=15
+            spaceAfter=14
+        )
+        section_style = ParagraphStyle(
+            'SectionTitle',
+            parent=styles['Normal'],
+            fontName='Helvetica-Bold',
+            fontSize=11,
+            textColor=colors.HexColor('#1E293B'),
+            spaceBefore=10,
+            spaceAfter=6
+        )
+        note_cell_style = ParagraphStyle(
+            'NoteCellStyle',
+            parent=styles['Normal'],
+            fontName='Helvetica',
+            fontSize=7.5,
+            leading=9,
+            textColor=colors.HexColor('#334155')
+        )
+        footer_style = ParagraphStyle(
+            'FooterStyle',
+            parent=styles['Normal'],
+            fontName='Helvetica-Oblique',
+            fontSize=7.5,
+            leading=10,
+            textColor=colors.HexColor('#94A3B8'),
+            spaceBefore=14
         )
 
-        elements.append(Paragraph("<b>TataDana</b> — Laporan Keuangan", title_style))
-        elements.append(Paragraph(f"Nama Pengguna: <b>{user_name}</b> | Periode: {start_date or 'Awal'} s/d {end_date or 'Sekarang'} | Dicetak: {format_wib_display()}", sub_style))
+        elements.append(Paragraph("<b>TataDana</b> — Laporan Keuangan Pribadi", title_style))
+        filter_str = f" | {', '.join(filter_descs)}" if filter_descs else ""
+        period_str = f"{start_date or 'Awal'} s/d {end_date or 'Sekarang'}"
+        elements.append(Paragraph(
+            f"Pemilik Akun: <b>{user_name}</b> | Periode: <b>{period_str}</b>{filter_str} | Waktu Ekspor: {format_wib_display()}",
+            sub_style
+        ))
 
-        # Calculate Totals
+        # Calculate Totals & Savings Rate
         total_income = sum(float(r["amount"]) for r in rows if r["type"] == "income")
         total_expense = sum(float(r["amount"]) for r in rows if r["type"] == "expense")
         net = total_income - total_expense
+        savings_rate = ((net / total_income) * 100.0) if total_income > 0 and net > 0 else 0.0
 
         # Summary Box Table
         summary_data = [
-            ["Total Pemasukan", "Total Pengeluaran", "Net Cashflow"],
-            [f"Rp {total_income:,.0f}", f"Rp {total_expense:,.0f}", f"Rp {net:,.0f}"]
+            ["Total Pemasukan", "Total Pengeluaran", "Arus Kas Bersih (Net)", "Tingkat Tabungan"],
+            [f"Rp {total_income:,.0f}", f"Rp {total_expense:,.0f}", f"Rp {net:,.0f}", f"{savings_rate:.1f}%"]
         ]
-        summary_table = Table(summary_data, colWidths=[175, 175, 175])
+        summary_table = Table(summary_data, colWidths=[133, 134, 134, 134])
         summary_table.setStyle(TableStyle([
             ('BACKGROUND', (0, 0), (-1, 0), colors.HexColor('#FFF7ED')),
-            ('TEXTCOLOR', (0, 0), (-1, 0), colors.HexColor('#C2410C')),
+            ('TEXTCOLOR', (0, 0), (-1, 0), colors.HexColor('#9A3412')),
             ('TEXTCOLOR', (0, 1), (0, 1), colors.HexColor('#059669')),
             ('TEXTCOLOR', (1, 1), (1, 1), colors.HexColor('#DC2626')),
-            ('TEXTCOLOR', (2, 1), (2, 1), colors.HexColor('#2563EB')),
+            ('TEXTCOLOR', (2, 1), (2, 1), colors.HexColor('#2563EB') if net >= 0 else colors.HexColor('#DC2626')),
+            ('TEXTCOLOR', (3, 1), (3, 1), colors.HexColor('#7C3AED')),
             ('ALIGN', (0, 0), (-1, -1), 'CENTER'),
             ('FONTNAME', (0, 0), (-1, 0), 'Helvetica-Bold'),
             ('FONTNAME', (0, 1), (-1, 1), 'Helvetica-Bold'),
-            ('FONTSIZE', (0, 1), (-1, 1), 13),
+            ('FONTSIZE', (0, 0), (-1, 0), 8.5),
+            ('FONTSIZE', (0, 1), (-1, 1), 11),
             ('BOX', (0, 0), (-1, -1), 1, colors.HexColor('#FDBA74')),
             ('INNERGRID', (0, 0), (-1, -1), 0.5, colors.HexColor('#FED7AA')),
-            ('TOPPADDING', (0, 0), (-1, -1), 6),
-            ('BOTTOMPADDING', (0, 0), (-1, -1), 6),
+            ('TOPPADDING', (0, 0), (-1, -1), 5),
+            ('BOTTOMPADDING', (0, 0), (-1, -1), 5),
         ]))
         elements.append(summary_table)
-        elements.append(Spacer(1, 15))
 
-        # Transaction Table
-        table_data = [["Tanggal (WIB)", "Jenis", "Kategori", "Dompet", "Nominal (IDR)", "Catatan"]]
+        # Category Breakdown (if expenses exist)
+        category_totals = {}
         for r in rows:
-            t_type = "Pemasukan" if r["type"] == "income" else ("Pengeluaran" if r["type"] == "expense" else "Transfer")
-            note = (r["note"] or "-")[:25]
-            table_data.append([
-                r["transaction_date"][:16],
-                t_type,
-                r["category_name"] or "-",
-                r["wallet_name"] or "-",
-                f"Rp {float(r['amount']):,.0f}",
-                note
-            ])
+            if r["type"] == "expense":
+                cname = r["category_name"] or "Lain-lain"
+                category_totals[cname] = category_totals.get(cname, 0.0) + float(r["amount"])
 
-        tx_table = Table(table_data, colWidths=[85, 75, 105, 95, 85, 80])
+        if category_totals and total_expense > 0:
+            elements.append(Paragraph("Distribusi Pengeluaran per Kategori", section_style))
+            cat_rows = [["Kategori", "Total Pengeluaran (IDR)", "Persentase (%)"]]
+            sorted_cats = sorted(category_totals.items(), key=lambda x: x[1], reverse=True)[:5]
+            for cname, camount in sorted_cats:
+                pct = (camount / total_expense) * 100.0
+                cat_rows.append([cname, f"Rp {camount:,.0f}", f"{pct:.1f}%"])
+
+            cat_table = Table(cat_rows, colWidths=[235, 170, 130])
+            cat_table.setStyle(TableStyle([
+                ('BACKGROUND', (0, 0), (-1, 0), colors.HexColor('#F1F5F9')),
+                ('TEXTCOLOR', (0, 0), (-1, 0), colors.HexColor('#334155')),
+                ('FONTNAME', (0, 0), (-1, 0), 'Helvetica-Bold'),
+                ('FONTSIZE', (0, 0), (-1, -1), 8),
+                ('ALIGN', (0, 0), (0, -1), 'LEFT'),
+                ('ALIGN', (1, 0), (-1, -1), 'RIGHT'),
+                ('GRID', (0, 0), (-1, -1), 0.5, colors.HexColor('#E2E8F0')),
+                ('TOPPADDING', (0, 0), (-1, -1), 3.5),
+                ('BOTTOMPADDING', (0, 0), (-1, -1), 3.5),
+                ('ROWBACKGROUNDS', (0, 1), (-1, -1), [colors.white, colors.HexColor('#F8FAFC')])
+            ]))
+            elements.append(cat_table)
+
+        # Transactions Detail Table
+        elements.append(Paragraph("Rincian Riwayat Transaksi", section_style))
+        table_data = [["No", "Tanggal (WIB)", "Jenis", "Kategori", "Dompet", "Nominal (IDR)", "Catatan"]]
+        
+        if not rows:
+            table_data.append(["-", "-", "-", "Tidak ada transaksi pada filter ini", "-", "Rp 0", "-"] * 1)
+        else:
+            for idx, r in enumerate(rows, 1):
+                t_type = "Pemasukan" if r["type"] == "income" else ("Pengeluaran" if r["type"] == "expense" else "Transfer")
+                clean_note = (r["note"] or "-").strip()
+                note_p = Paragraph(clean_note, note_cell_style)
+                table_data.append([
+                    str(idx),
+                    r["transaction_date"][:16],
+                    t_type,
+                    r["category_name"] or "-",
+                    r["wallet_name"] or "-",
+                    f"Rp {float(r['amount']):,.0f}",
+                    note_p
+                ])
+
+        tx_table = Table(table_data, colWidths=[24, 76, 60, 95, 80, 85, 115], repeatRows=1)
         tx_table.setStyle(TableStyle([
             ('BACKGROUND', (0, 0), (-1, 0), colors.HexColor('#FF6B00')),
             ('TEXTCOLOR', (0, 0), (-1, 0), colors.white),
             ('FONTNAME', (0, 0), (-1, 0), 'Helvetica-Bold'),
-            ('FONTSIZE', (0, 0), (-1, -1), 8),
-            ('ALIGN', (0, 0), (-1, -1), 'LEFT'),
-            ('ALIGN', (4, 1), (4, -1), 'RIGHT'),
-            ('BOTTOMPADDING', (0, 0), (-1, -1), 4),
-            ('TOPPADDING', (0, 0), (-1, -1), 4),
+            ('FONTSIZE', (0, 0), (-1, -1), 7.5),
+            ('ALIGN', (0, 0), (0, -1), 'CENTER'),
+            ('ALIGN', (1, 0), (4, -1), 'LEFT'),
+            ('ALIGN', (5, 0), (5, -1), 'RIGHT'),
+            ('ALIGN', (6, 0), (6, -1), 'LEFT'),
+            ('BOTTOMPADDING', (0, 0), (-1, -1), 3.5),
+            ('TOPPADDING', (0, 0), (-1, -1), 3.5),
             ('GRID', (0, 0), (-1, -1), 0.5, colors.HexColor('#E2E8F0')),
             ('ROWBACKGROUNDS', (0, 1), (-1, -1), [colors.white, colors.HexColor('#F8FAFC')])
         ]))
         elements.append(tx_table)
 
-        doc.build(elements)
+        elements.append(Paragraph(
+            "Dokumen ini sah dihasilkan secara elektronik oleh sistem TataDana dan berlaku sebagai arsip rekapitulasi keuangan pribadi pengguna.",
+            footer_style
+        ))
+
+        doc.build(elements, canvasmaker=NumberedCanvas)
 
         # Save to Export History
         now_wib = get_wib_str()

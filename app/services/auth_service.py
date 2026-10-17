@@ -103,7 +103,16 @@ class AuthService:
             raise ValueError("Pengguna tidak ditemukan")
 
         stored_otp = row["otp_code"]
+        expires_at = row["otp_expires_at"]
         now = get_wib_str()
+
+        if not stored_otp:
+            conn.close()
+            raise ValueError("Tidak ada kode OTP aktif. Silakan minta kode baru.")
+
+        if expires_at and expires_at < now:
+            conn.close()
+            raise ValueError("Kode OTP telah kedaluwarsa. Silakan minta kode baru.")
 
         if stored_otp != otp_code.strip():
             conn.close()
@@ -124,7 +133,7 @@ class AuthService:
         cursor = conn.cursor()
         new_otp = generate_otp()
         now = get_wib_str()
-        expires = get_wib_str(get_wib_now() + timedelta(minutes=15))
+        expires = get_wib_str(get_wib_now() + timedelta(minutes=10))
         cursor.execute("""
         UPDATE profiles
         SET otp_code = ?, otp_expires_at = ?, updated_at = ?
@@ -133,6 +142,120 @@ class AuthService:
         conn.commit()
         conn.close()
         return new_otp
+
+    @staticmethod
+    def send_whatsapp_otp(phone_number: Optional[str] = None, user_id: Optional[str] = None) -> Dict[str, Any]:
+        """
+        Sends/resends a 6-digit verification OTP code via WhatsApp.
+        Supports lookup by either phone_number or user_id.
+        """
+        conn = get_db()
+        cursor = conn.cursor()
+
+        if user_id:
+            cursor.execute("SELECT id, full_name, phone_number FROM profiles WHERE id = ?", (user_id,))
+        elif phone_number:
+            clean_phone = re.sub(r'[^0-9]', '', phone_number)
+            if clean_phone.startswith('62'):
+                clean_phone = '0' + clean_phone[2:]
+            cursor.execute("SELECT id, full_name, phone_number FROM profiles WHERE phone_number = ?", (clean_phone,))
+        else:
+            conn.close()
+            raise ValueError("user_id atau phone_number wajib disertakan.")
+
+        row = cursor.fetchone()
+        if not row:
+            conn.close()
+            raise ValueError("Pengguna atau nomor WhatsApp tidak terdaftar dalam sistem.")
+
+        target_user_id = row["id"]
+        full_name = row["full_name"]
+        raw_phone = row["phone_number"] or ""
+
+        otp = generate_otp()
+        now = get_wib_str()
+        expires = get_wib_str(get_wib_now() + timedelta(minutes=10))
+
+        cursor.execute("""
+        UPDATE profiles
+        SET otp_code = ?, otp_expires_at = ?, updated_at = ?
+        WHERE id = ?
+        """, (otp, expires, now, target_user_id))
+        conn.commit()
+        conn.close()
+
+        # Masked phone (e.g. 0812****789)
+        if len(raw_phone) > 6:
+            masked_phone = raw_phone[:4] + "****" + raw_phone[-3:]
+        else:
+            masked_phone = raw_phone
+
+        # Simulated WhatsApp delivery logger
+        print(f"[WHATSAPP OTP GATEWAY] Mengirim pesan ke {raw_phone}: 'Halo {full_name}, kode verifikasi pendaftaran TataDana Anda adalah {otp}. Berlaku selama 10 menit. Jangan berikan kode ini kepada siapapun.'")
+
+        return {
+            "success": True,
+            "message": f"Kode OTP telah dikirimkan via WhatsApp ke {masked_phone}",
+            "phone_number": raw_phone,
+            "masked_phone": masked_phone,
+            "otp_preview": otp,
+            "expires_in_seconds": 600
+        }
+
+    @staticmethod
+    def verify_whatsapp_otp(otp_code: str, user_id: Optional[str] = None, phone_number: Optional[str] = None) -> Dict[str, Any]:
+        """
+        Verifies the 6-digit WhatsApp OTP code and marks phone_verified = 1.
+        """
+        conn = get_db()
+        cursor = conn.cursor()
+
+        if user_id:
+            cursor.execute("SELECT id, otp_code, otp_expires_at, phone_verified FROM profiles WHERE id = ?", (user_id,))
+        elif phone_number:
+            clean_phone = re.sub(r'[^0-9]', '', phone_number)
+            if clean_phone.startswith('62'):
+                clean_phone = '0' + clean_phone[2:]
+            cursor.execute("SELECT id, otp_code, otp_expires_at, phone_verified FROM profiles WHERE phone_number = ?", (clean_phone,))
+        else:
+            conn.close()
+            raise ValueError("user_id atau phone_number wajib disertakan.")
+
+        row = cursor.fetchone()
+        if not row:
+            conn.close()
+            raise ValueError("Pengguna tidak ditemukan.")
+
+        target_user_id = row["id"]
+        stored_otp = row["otp_code"]
+        expires_at = row["otp_expires_at"]
+
+        if not stored_otp:
+            conn.close()
+            raise ValueError("Tidak ada kode OTP aktif. Silakan minta kode baru.")
+
+        now_str = get_wib_str()
+        if expires_at and expires_at < now_str:
+            conn.close()
+            raise ValueError("Kode OTP telah kedaluwarsa. Silakan minta kode baru.")
+
+        if stored_otp.strip() != otp_code.strip():
+            conn.close()
+            raise ValueError("Kode OTP tidak cocok. Silakan periksa kembali pesan WhatsApp Anda.")
+
+        cursor.execute("""
+        UPDATE profiles
+        SET phone_verified = 1, otp_code = NULL, otp_expires_at = NULL, updated_at = ?
+        WHERE id = ?
+        """, (now_str, target_user_id))
+        conn.commit()
+        conn.close()
+
+        return {
+            "success": True,
+            "message": "Nomor WhatsApp berhasil diverifikasi!",
+            "phone_verified": True
+        }
 
     @staticmethod
     def complete_onboarding(user_id: str, selected_categories: Optional[list] = None, wallet_name: Optional[str] = None) -> Dict[str, Any]:

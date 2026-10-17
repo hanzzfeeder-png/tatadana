@@ -19,6 +19,7 @@ storage/*.sqlite3
 
 # Exports & Generated Reports
 storage/exports/
+static/uploads/
 *.pdf
 *.xlsx
 *.csv

@@ -1,0 +1,400 @@
+{% extends "dashboard/layout.html" %}
+
+{% block page_title %}Kalender Transaksi{% endblock %}
+{% block page_subtitle %}Visualisasikan arus kas harian, pantau ritme pengeluaran, dan catat evaluasi finansial harian.{% endblock %}
+
+{% block content %}
+<div class="space-y-6">
+    <!-- Month Navigation & Monthly Summary Cards -->
+    <div class="card-premium p-5 flex flex-col lg:flex-row items-center justify-between gap-5">
+        <!-- Month Controller -->
+        <div class="flex items-center gap-3 w-full lg:w-auto justify-between lg:justify-start">
+            <button onclick="changeMonth(-1)" class="p-2 rounded-xl text-slate-600 hover:text-slate-900 hover:bg-slate-100 border border-slate-200 transition-colors" title="Bulan Sebelumnya">
+                <i data-lucide="chevron-left" class="w-5 h-5"></i>
+            </button>
+            <div class="text-center min-w-[180px]">
+                <h3 id="calendar-month-title" class="font-black text-lg text-slate-900">Memuat...</h3>
+                <span id="calendar-year-subtitle" class="text-xs text-slate-400 font-semibold">Tahun -</span>
+            </div>
+            <button onclick="changeMonth(1)" class="p-2 rounded-xl text-slate-600 hover:text-slate-900 hover:bg-slate-100 border border-slate-200 transition-colors" title="Bulan Berikutnya">
+                <i data-lucide="chevron-right" class="w-5 h-5"></i>
+            </button>
+            <button onclick="goToCurrentMonth()" class="px-3 py-1.5 rounded-xl text-xs font-bold bg-orange-50 text-orange-600 hover:bg-orange-100 border border-orange-200 ml-2 transition-colors">
+                Bulan Ini
+            </button>
+        </div>
+
+        <!-- Monthly Mini Metrics -->
+        <div class="grid grid-cols-3 gap-3 w-full lg:w-auto text-center">
+            <div class="px-4 py-2 rounded-xl bg-emerald-50/60 border border-emerald-100 min-w-[110px]">
+                <span class="text-[10px] font-bold text-emerald-700 uppercase tracking-wider block">Pemasukan</span>
+                <span id="cal-month-income" class="text-sm font-black text-emerald-600">Rp 0</span>
+            </div>
+            <div class="px-4 py-2 rounded-xl bg-red-50/60 border border-red-100 min-w-[110px]">
+                <span class="text-[10px] font-bold text-red-700 uppercase tracking-wider block">Pengeluaran</span>
+                <span id="cal-month-expense" class="text-sm font-black text-red-600">Rp 0</span>
+            </div>
+            <div class="px-4 py-2 rounded-xl bg-blue-50/60 border border-blue-100 min-w-[110px]">
+                <span class="text-[10px] font-bold text-blue-700 uppercase tracking-wider block">Net Cashflow</span>
+                <span id="cal-month-net" class="text-sm font-black text-slate-900">Rp 0</span>
+            </div>
+        </div>
+    </div>
+
+    <!-- Calendar Grid Card -->
+    <div class="card-premium overflow-hidden">
+        <!-- Day-of-Week Headers -->
+        <div class="grid grid-cols-7 border-b border-slate-200 bg-slate-50/80 text-center text-xs font-bold text-slate-500 py-3">
+            <div class="text-red-500">Minggu</div>
+            <div>Senin</div>
+            <div>Selasa</div>
+            <div>Rabu</div>
+            <div>Kamis</div>
+            <div>Jumat</div>
+            <div class="text-orange-500">Sabtu</div>
+        </div>
+
+        <!-- Calendar Days Container -->
+        <div id="calendar-grid-body" class="grid grid-cols-7 divide-x divide-y divide-slate-100">
+            <div class="col-span-7 py-20 text-center text-slate-400 text-sm">
+                Memuat kalender transaksi...
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Modal: Detail Transaksi & Catatan Harian -->
+<div id="date-detail-modal" class="fixed inset-0 bg-slate-900/40 backdrop-blur-sm z-50 hidden items-center justify-center p-4">
+    <div class="bg-white rounded-2xl max-w-xl w-full p-6 shadow-2xl relative max-h-[90vh] flex flex-col text-slate-800">
+        <button onclick="closeModal('date-detail-modal')" class="absolute top-5 right-5 text-slate-400 hover:text-slate-600 text-2xl font-bold">&times;</button>
+        
+        <!-- Modal Header -->
+        <div class="pb-4 border-b border-slate-100">
+            <div class="flex items-center gap-2">
+                <span class="p-2 rounded-xl bg-orange-100 text-orange-600">
+                    <i data-lucide="calendar" class="w-4 h-4"></i>
+                </span>
+                <div>
+                    <h3 id="modal-date-title" class="font-black text-base text-slate-900">Detail Tanggal</h3>
+                    <p class="text-xs text-slate-400">Ringkasan transaksi dan catatan evaluasi finansial harian</p>
+                </div>
+            </div>
+        </div>
+
+        <div class="overflow-y-auto space-y-5 my-4 pr-1 flex-1">
+            <!-- 1. Catatan Harian (Daily Note) -->
+            <div class="p-4 rounded-xl bg-orange-50/50 border border-orange-100">
+                <div class="flex items-center justify-between mb-2">
+                    <label class="text-xs font-bold text-orange-950 flex items-center gap-1.5">
+                        <i data-lucide="edit-3" class="w-3.5 h-3.5 text-orange-500"></i>
+                        <span>Catatan Keuangan Hari Ini</span>
+                    </label>
+                    <span id="note-saved-status" class="text-[10px] text-slate-400 font-medium"></span>
+                </div>
+
+                <!-- Mood Selector -->
+                <div class="mb-3">
+                    <label class="block text-[11px] font-semibold text-slate-500 mb-1.5">Mood Finansial Hari Ini:</label>
+                    <div class="flex flex-wrap gap-2 text-xs" id="mood-picker">
+                        <button type="button" onclick="selectMood('happy')" data-mood="happy" class="mood-btn px-2.5 py-1.5 rounded-lg border border-slate-200 bg-white hover:border-orange-400 flex items-center gap-1">
+                            <span>😊</span><span>Bahagia</span>
+                        </button>
+                        <button type="button" onclick="selectMood('saving')" data-mood="saving" class="mood-btn px-2.5 py-1.5 rounded-lg border border-slate-200 bg-white hover:border-orange-400 flex items-center gap-1">
+                            <span>🎯</span><span>Hemat</span>
+                        </button>
+                        <button type="button" onclick="selectMood('neutral')" data-mood="neutral" class="mood-btn px-2.5 py-1.5 rounded-lg border border-slate-200 bg-white hover:border-orange-400 flex items-center gap-1">
+                            <span>😐</span><span>Biasa</span>
+                        </button>
+                        <button type="button" onclick="selectMood('splurge')" data-mood="splurge" class="mood-btn px-2.5 py-1.5 rounded-lg border border-slate-200 bg-white hover:border-orange-400 flex items-center gap-1">
+                            <span>💸</span><span>Khilaf / Boros</span>
+                        </button>
+                        <button type="button" onclick="selectMood('sad')" data-mood="sad" class="mood-btn px-2.5 py-1.5 rounded-lg border border-slate-200 bg-white hover:border-orange-400 flex items-center gap-1">
+                            <span>😔</span><span>Cemas</span>
+                        </button>
+                    </div>
+                </div>
+
+                <textarea id="daily-note-text" rows="3" placeholder="Tulis catatan atau refleksi keuangan hari ini (misal: 'Belanja bulanan hemat di pasar', 'Ada pengeluaran mendadak ganti oli')..." class="w-full p-3 rounded-xl border border-slate-200 text-xs focus:outline-none focus:border-orange-500 bg-white"></textarea>
+                
+                <div class="flex items-center justify-between mt-2.5 pt-2">
+                    <button type="button" onclick="handleDeleteDailyNote()" id="btn-delete-note" class="text-xs text-red-500 hover:text-red-700 font-semibold hidden flex items-center gap-1">
+                        <i data-lucide="trash-2" class="w-3.5 h-3.5"></i>
+                        <span>Hapus Catatan</span>
+                    </button>
+                    <div class="ml-auto">
+                        <button type="button" onclick="handleSaveDailyNote()" id="btn-save-note" class="btn-primary px-4 py-1.5 rounded-xl text-xs font-bold flex items-center gap-1.5">
+                            <i data-lucide="check" class="w-3.5 h-3.5"></i>
+                            <span>Simpan Catatan</span>
+                        </button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- 2. Transaksi Pada Tanggal Tersebut -->
+            <div>
+                <div class="flex items-center justify-between mb-2.5">
+                    <h4 class="font-bold text-xs text-slate-800 uppercase tracking-wider">Transaksi Tercatat</h4>
+                    <span id="modal-day-summary" class="text-xs font-bold text-slate-500">0 transaksi</span>
+                </div>
+
+                <div id="modal-tx-list" class="space-y-2">
+                    <div class="text-center py-6 text-xs text-slate-400">Memuat transaksi...</div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Modal Footer -->
+        <div class="pt-3 border-t border-slate-100 flex items-center justify-between">
+            <a href="/dashboard/transaksi" class="text-xs font-bold text-orange-600 hover:underline flex items-center gap-1">
+                <i data-lucide="plus-circle" class="w-3.5 h-3.5"></i>
+                <span>Buka Menu Transaksi</span>
+            </a>
+            <button onclick="closeModal('date-detail-modal')" class="px-4 py-2 rounded-xl text-xs font-bold bg-slate-100 text-slate-700 hover:bg-slate-200">
+                Tutup
+            </button>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+{{ super() }}
+<script>
+    let currentYear = new Date().getFullYear();
+    let currentMonth = new Date().getMonth() + 1; // 1-12
+    let activeSelectedDate = null;
+    let selectedMood = "neutral";
+
+    const monthNames = [
+        "Januari", "Februari", "Maret", "April", "Mei", "Juni",
+        "Juli", "Agustus", "September", "Oktober", "November", "Desember"
+    ];
+
+    const moodIcons = {
+        "happy": "😊",
+        "saving": "🎯",
+        "neutral": "😐",
+        "splurge": "💸",
+        "sad": "😔"
+    };
+
+    async function loadCalendar() {
+        const titleEl = document.getElementById("calendar-month-title");
+        const subtitleEl = document.getElementById("calendar-year-subtitle");
+        const gridBody = document.getElementById("calendar-grid-body");
+
+        titleEl.innerText = `${monthNames[currentMonth - 1]}`;
+        subtitleEl.innerText = `Tahun ${currentYear}`;
+
+        try {
+            const res = await apiCall(`/api/calendar/month?year=${currentYear}&month=${currentMonth}`);
+            const data = res.data;
+
+            // Update mini metrics
+            document.getElementById("cal-month-income").innerText = formatIDR(data.total_income);
+            document.getElementById("cal-month-expense").innerText = formatIDR(data.total_expense);
+            const netEl = document.getElementById("cal-month-net");
+            netEl.innerText = formatIDR(data.net_cashflow);
+            netEl.className = `text-sm font-black ${data.net_cashflow >= 0 ? 'text-blue-600' : 'text-red-600'}`;
+
+            // Render calendar grid
+            let html = "";
+
+            // Offset empty cells before 1st day of month (first_day_of_week: 0=Sun..6=Sat)
+            for (let i = 0; i < data.first_day_of_week; i++) {
+                html += `<div class="min-h-[95px] p-2 bg-slate-50/40 text-slate-300"></div>`;
+            }
+
+            const todayStr = new Date().toISOString().slice(0, 10);
+
+            // Render each day cell
+            for (let dayNum = 1; dayNum <= data.num_days; dayNum++) {
+                const dateKey = `${currentYear}-${currentMonth.toString().padStart(2, '0')}-${dayNum.toString().padStart(2, '0')}`;
+                const dayObj = data.days[dateKey] || { day: dayNum, income: 0, expense: 0, tx_count: 0, note: null };
+                const isToday = dateKey === todayStr;
+                const hasNote = Boolean(dayObj.note);
+                const moodEmoji = hasNote ? (moodIcons[dayObj.note.mood] || "📝") : "";
+
+                html += `
+                <div onclick="openDateDetail('${dateKey}')" class="min-h-[100px] p-2.5 bg-white hover:bg-orange-50/40 cursor-pointer transition-colors flex flex-col justify-between group relative ${isToday ? 'ring-2 ring-inset ring-orange-500' : ''}">
+                    <!-- Header date & note indicator -->
+                    <div class="flex items-center justify-between">
+                        <span class="text-xs font-bold ${isToday ? 'w-6 h-6 rounded-full bg-orange-500 text-white flex items-center justify-center font-black' : 'text-slate-700'}">
+                            ${dayNum}
+                        </span>
+                        ${hasNote ? `
+                            <span class="text-xs" title="${dayObj.note.note_text}">${moodEmoji}</span>
+                        ` : ''}
+                    </div>
+
+                    <!-- Flow Badges -->
+                    <div class="space-y-1 my-1">
+                        ${dayObj.income > 0 ? `
+                            <div class="text-[10px] font-bold text-emerald-700 bg-emerald-50 px-1.5 py-0.5 rounded truncate" title="Pemasukan: ${formatIDR(dayObj.income)}">
+                                +${formatIDR(dayObj.income)}
+                            </div>
+                        ` : ''}
+                        ${dayObj.expense > 0 ? `
+                            <div class="text-[10px] font-bold text-red-700 bg-red-50 px-1.5 py-0.5 rounded truncate" title="Pengeluaran: ${formatIDR(dayObj.expense)}">
+                                -${formatIDR(dayObj.expense)}
+                            </div>
+                        ` : ''}
+                    </div>
+
+                    <!-- Footer: tx count -->
+                    <div class="text-[10px] text-slate-400 font-medium">
+                        ${dayObj.tx_count > 0 ? `${dayObj.tx_count} transaksi` : ''}
+                    </div>
+                </div>
+                `;
+            }
+
+            gridBody.innerHTML = html;
+        } catch (e) {
+            gridBody.innerHTML = `<div class="col-span-7 py-20 text-center text-red-500">Error memuat kalender: ${e.message}</div>`;
+        }
+    }
+
+    function changeMonth(delta) {
+        currentMonth += delta;
+        if (currentMonth > 12) {
+            currentMonth = 1;
+            currentYear++;
+        } else if (currentMonth < 1) {
+            currentMonth = 12;
+            currentYear--;
+        }
+        loadCalendar();
+    }
+
+    function goToCurrentMonth() {
+        const now = new Date();
+        currentYear = now.getFullYear();
+        currentMonth = now.getMonth() + 1;
+        loadCalendar();
+    }
+
+    function selectMood(m) {
+        selectedMood = m;
+        document.querySelectorAll(".mood-btn").forEach(b => {
+            if (b.dataset.mood === m) {
+                b.className = "mood-btn px-2.5 py-1.5 rounded-lg border-2 border-orange-500 bg-orange-50 text-orange-900 font-bold flex items-center gap-1";
+            } else {
+                b.className = "mood-btn px-2.5 py-1.5 rounded-lg border border-slate-200 bg-white hover:border-orange-400 text-slate-700 flex items-center gap-1";
+            }
+        });
+    }
+
+    async function openDateDetail(dateStr) {
+        activeSelectedDate = dateStr;
+        document.getElementById("modal-date-title").innerText = `Tanggal ${dateStr}`;
+        document.getElementById("daily-note-text").value = "";
+        document.getElementById("btn-delete-note").classList.add("hidden");
+        document.getElementById("note-saved-status").innerText = "";
+        selectMood("neutral");
+
+        openModal("date-detail-modal");
+
+        const txContainer = document.getElementById("modal-tx-list");
+        txContainer.innerHTML = `<div class="text-center py-6 text-xs text-slate-400">Memuat rincian transaksi...</div>`;
+
+        try {
+            const res = await apiCall(`/api/calendar/day?date=${dateStr}`);
+            const data = res.data;
+
+            // Populate Daily Note
+            if (data.note) {
+                document.getElementById("daily-note-text").value = data.note.note_text;
+                selectMood(data.note.mood || "neutral");
+                document.getElementById("btn-delete-note").classList.remove("hidden");
+                document.getElementById("note-saved-status").innerText = `Tersimpan (${data.note.updated_at ? data.note.updated_at.slice(11, 16) : ''} WIB)`;
+            }
+
+            // Populate Transactions
+            document.getElementById("modal-day-summary").innerText = `${data.transactions.length} transaksi (${formatIDR(data.total_expense)} keluar, ${formatIDR(data.total_income)} masuk)`;
+            
+            if (data.transactions.length === 0) {
+                txContainer.innerHTML = `<div class="text-center py-6 text-xs text-slate-400 bg-slate-50 rounded-xl">Belum ada transaksi tercatat pada tanggal ini.</div>`;
+                return;
+            }
+
+            txContainer.innerHTML = data.transactions.map(t => {
+                const isInc = t.type === 'income';
+                const isTrf = t.type === 'transfer';
+                const sign = isInc ? "+" : (isTrf ? "" : "-");
+                const color = isInc ? "text-emerald-600" : (isTrf ? "text-blue-600" : "text-slate-900");
+
+                return `
+                <div class="p-3 rounded-xl bg-slate-50 border border-slate-100 flex items-center justify-between text-xs">
+                    <div class="flex items-center gap-2.5">
+                        <span class="text-base">${t.category_icon || '🏷️'}</span>
+                        <div>
+                            <div class="font-bold text-slate-900">${t.note || t.category_name || 'Transaksi'}</div>
+                            <div class="text-[10px] text-slate-400">${t.transaction_date.slice(11, 16)} WIB • Dompet: ${t.wallet_name || '-'}</div>
+                        </div>
+                    </div>
+                    <div class="font-extrabold ${color}">
+                        ${sign}${formatIDR(t.amount)}
+                    </div>
+                </div>
+                `;
+            }).join('');
+
+        } catch (e) {
+            txContainer.innerHTML = `<div class="text-center py-6 text-xs text-red-500">Gagal memuat: ${e.message}</div>`;
+        }
+    }
+
+    async function handleSaveDailyNote() {
+        if (!activeSelectedDate) return;
+        const note = document.getElementById("daily-note-text").value.trim();
+        if (!note) {
+            showToast("Tuliskan catatan harian terlebih dahulu.", "warning");
+            return;
+        }
+
+        const btn = document.getElementById("btn-save-note");
+        btn.disabled = true;
+
+        try {
+            await apiCall("/api/calendar/note", {
+                method: "POST",
+                body: JSON.stringify({
+                    date: activeSelectedDate,
+                    note: note,
+                    mood: selectedMood
+                })
+            });
+            showToast("Catatan harian berhasil disimpan!", "success");
+            document.getElementById("btn-delete-note").classList.remove("hidden");
+            document.getElementById("note-saved-status").innerText = "Tersimpan baru saja";
+            loadCalendar();
+        } catch (err) {
+            showToast(err.message, "error");
+        } finally {
+            btn.disabled = false;
+        }
+    }
+
+    async function handleDeleteDailyNote() {
+        if (!activeSelectedDate) return;
+        if (!confirm("Hapus catatan harian pada tanggal ini?")) return;
+
+        try {
+            await apiCall(`/api/calendar/note?date=${activeSelectedDate}`, { method: "DELETE" });
+            showToast("Catatan harian berhasil dihapus.", "success");
+            document.getElementById("daily-note-text").value = "";
+            document.getElementById("btn-delete-note").classList.add("hidden");
+            document.getElementById("note-saved-status").innerText = "";
+            selectMood("neutral");
+            loadCalendar();
+        } catch (err) {
+            showToast(err.message, "error");
+        }
+    }
+
+    document.addEventListener("DOMContentLoaded", () => {
+        loadCalendar();
+    });
+</script>
+{% endblock %}

@@ -1,8 +1,9 @@
-from fastapi import APIRouter, Depends, HTTPException
+from fastapi import APIRouter, Depends, HTTPException, UploadFile, File
 from pydantic import BaseModel
 from typing import Optional
 from app.security import get_current_user
 from app.services.reminder_service import ReminderService
+from app.services.storage_service import StorageService
 from app.database import get_db
 from app.config import get_wib_str
 
@@ -42,6 +43,44 @@ def update_profile(req: UpdateProfileRequest, user: dict = Depends(get_current_u
     updated = cursor.fetchone()
     conn.close()
     return {"success": True, "data": dict(updated)}
+
+@router.post("/avatar")
+async def upload_user_avatar(
+    file: UploadFile = File(...),
+    user: dict = Depends(get_current_user)
+):
+    try:
+        content = await file.read()
+        avatar_url = StorageService.upload_avatar(
+            user_id=user["id"],
+            file_bytes=content,
+            content_type=file.content_type or "image/jpeg"
+        )
+
+        conn = get_db()
+        cursor = conn.cursor()
+        now = get_wib_str()
+        cursor.execute("""
+        UPDATE profiles
+        SET avatar_url = ?, updated_at = ?
+        WHERE id = ?
+        """, (avatar_url, now, user["id"]))
+        conn.commit()
+
+        cursor.execute("SELECT id, email, full_name, phone_number, phone_verified, plan, role, avatar_url, default_currency FROM profiles WHERE id = ?", (user["id"],))
+        updated = cursor.fetchone()
+        conn.close()
+
+        return {
+            "success": True,
+            "message": "Foto profil berhasil diperbarui.",
+            "avatar_url": avatar_url,
+            "data": dict(updated)
+        }
+    except ValueError as e:
+        raise HTTPException(status_code=400, detail=str(e))
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Gagal mengunggah foto profil: {str(e)}")
 
 @router.get("/reminder")
 def get_reminder(user: dict = Depends(get_current_user)):

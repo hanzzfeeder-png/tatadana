@@ -40,6 +40,10 @@
                 <i data-lucide="credit-card" class="w-5 h-5"></i>
                 <span>Transaksi</span>
             </a>
+            <a href="/dashboard/kalender" class="nav-link flex items-center gap-3 px-3.5 py-2.5 rounded-xl font-medium text-sm transition-colors {% if active_page == 'kalender' %}bg-orange-50 text-orange-600 font-semibold{% else %}text-slate-600 hover:bg-slate-50 hover:text-slate-900{% endif %}">
+                <i data-lucide="calendar" class="w-5 h-5"></i>
+                <span>Kalender</span>
+            </a>
             <a href="/dashboard/laporan" class="nav-link flex items-center gap-3 px-3.5 py-2.5 rounded-xl font-medium text-sm transition-colors {% if active_page == 'laporan' %}bg-orange-50 text-orange-600 font-semibold{% else %}text-slate-600 hover:bg-slate-50 hover:text-slate-900{% endif %}">
                 <i data-lucide="bar-chart-3" class="w-5 h-5"></i>
                 <span>Laporan</span>
@@ -71,9 +75,13 @@
         <!-- User Profile Card in Sidebar -->
         <div class="p-4 border-t border-slate-100 bg-slate-50/50">
             <div class="flex items-center gap-3 mb-3">
-                <div class="w-10 h-10 rounded-full bg-orange-100 border border-orange-200 flex items-center justify-center text-orange-600 font-bold text-sm">
+                {% if user and user.avatar_url %}
+                <img id="sidebar-user-avatar" src="{{ user.avatar_url }}" alt="Avatar" class="w-10 h-10 rounded-full object-cover border border-orange-300">
+                {% else %}
+                <div id="sidebar-user-avatar-placeholder" class="w-10 h-10 rounded-full bg-orange-100 border border-orange-200 flex items-center justify-center text-orange-600 font-bold text-sm">
                     {{ user.full_name[:2].upper() if user else 'TD' }}
                 </div>
+                {% endif %}
                 <div class="flex-1 min-w-0">
                     <div class="font-semibold text-sm text-slate-900 truncate">{{ user.full_name if user else 'Pengguna' }}</div>
                     <div class="flex items-center gap-1.5 mt-0.5">
@@ -104,6 +112,7 @@
                 <div class="py-4 space-y-2">
                     <a href="/dashboard" class="block py-2 text-slate-700 font-medium">Beranda</a>
                     <a href="/dashboard/transaksi" class="block py-2 text-slate-700 font-medium">Transaksi</a>
+                    <a href="/dashboard/kalender" class="block py-2 text-slate-700 font-medium">Kalender</a>
                     <a href="/dashboard/laporan" class="block py-2 text-slate-700 font-medium">Laporan</a>
                     <a href="/dashboard/budget" class="block py-2 text-slate-700 font-medium">Budget</a>
                     <a href="/dashboard/wallet" class="block py-2 text-slate-700 font-medium">Dompet</a>
@@ -198,6 +207,103 @@
             </button>
         </form>
     </div>
+</div>
+
+<!-- Floating Action Button: Tata AI Chatbot -->
+<div id="tata-ai-fab-container" class="fixed bottom-6 right-6 z-40 flex items-center gap-2.5">
+    <!-- Hover Tooltip Pill -->
+    <div id="tata-ai-pill" class="hidden sm:flex items-center gap-2 bg-white/95 backdrop-blur-md px-3.5 py-1.5 rounded-full border border-orange-100 shadow-lg text-xs font-semibold text-slate-700 pointer-events-none transition-all duration-300">
+        <span class="w-2 h-2 rounded-full bg-emerald-500 animate-pulse"></span>
+        <span>Tanya Tata AI</span>
+    </div>
+
+    <!-- Toggle Button -->
+    <button id="tata-ai-fab-btn" onclick="toggleTataAIChat()" title="Buka Asisten Tata AI" class="relative group w-14 h-14 rounded-2xl bg-gradient-to-tr from-orange-600 via-orange-500 to-amber-500 text-white flex items-center justify-center shadow-xl shadow-orange-500/35 hover:scale-105 active:scale-95 transition-all duration-200">
+        <i data-lucide="bot" id="tata-ai-icon-bot" class="w-7 h-7 transition-transform group-hover:rotate-6"></i>
+        <i data-lucide="x" id="tata-ai-icon-close" class="w-6 h-6 hidden"></i>
+        <span class="absolute -top-1 -right-1 flex h-3.5 w-3.5">
+            <span class="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
+            <span class="relative inline-flex rounded-full h-3.5 w-3.5 bg-emerald-500 border-2 border-white"></span>
+        </span>
+    </button>
+</div>
+
+<!-- Tata AI Chat Drawer Modal Window -->
+<div id="tata-ai-drawer" class="fixed bottom-24 right-4 sm:right-6 z-50 w-[94vw] sm:w-[410px] h-[560px] max-h-[82vh] bg-white rounded-3xl shadow-2xl border border-slate-100 flex flex-col overflow-hidden transition-all duration-200 hidden animate-in fade-in slide-in-from-bottom-5">
+    <!-- Chat Header -->
+    <div class="px-5 py-3.5 bg-gradient-to-r from-orange-500 to-amber-500 text-white flex items-center justify-between shadow-sm">
+        <div class="flex items-center gap-3">
+            <div class="w-9 h-9 rounded-xl bg-white/20 backdrop-blur-md flex items-center justify-center font-black text-white text-base">
+                🤖
+            </div>
+            <div>
+                <div class="flex items-center gap-1.5">
+                    <h4 class="font-bold text-sm tracking-tight leading-none">Tata AI</h4>
+                    <span class="text-[9px] bg-white/25 px-1.5 py-0.5 rounded font-bold uppercase tracking-wider">Assistant</span>
+                </div>
+                <div class="flex items-center gap-1.5 text-[11px] text-orange-100 mt-1">
+                    <span class="w-1.5 h-1.5 rounded-full bg-emerald-300 animate-pulse"></span>
+                    <span>Asisten Finansial Cerdas</span>
+                </div>
+            </div>
+        </div>
+        <div class="flex items-center gap-1">
+            <button onclick="confirmClearTataAIChat()" title="Hapus Riwayat Chat" class="p-1.5 rounded-lg text-white/80 hover:text-white hover:bg-white/15 transition-colors">
+                <i data-lucide="trash-2" class="w-4 h-4"></i>
+            </button>
+            <button onclick="toggleTataAIChat()" title="Tutup Chat" class="p-1.5 rounded-lg text-white/80 hover:text-white hover:bg-white/15 transition-colors">
+                <i data-lucide="x" class="w-5 h-5"></i>
+            </button>
+        </div>
+    </div>
+
+    <!-- Chat Messages Container -->
+    <div id="tata-ai-messages" class="flex-1 p-4 overflow-y-auto space-y-3 bg-slate-50/60 text-xs">
+        <!-- Welcoming Greeting -->
+        <div id="tata-ai-welcome-box" class="bg-white p-3.5 rounded-2xl border border-slate-100 shadow-sm space-y-2">
+            <div class="flex items-center gap-2 text-slate-800 font-bold">
+                <span>👋</span>
+                <span>Halo! Ada yang bisa Tata bantu hari ini?</span>
+            </div>
+            <p class="text-slate-500 leading-relaxed text-[11px]">
+                Tanyakan apa saja seputar kondisi keuangan, saldo dompet, ringkasan pengeluaran, status anggaran, atau tips berhemat!
+            </p>
+            <div class="pt-1.5 flex flex-wrap gap-1.5">
+                <button type="button" onclick="sendQuickPrompt('Berapa total saldo saya saat ini?')" class="px-2.5 py-1 bg-orange-50 hover:bg-orange-100 text-orange-700 font-medium rounded-lg text-[11px] border border-orange-200/60 transition-colors">
+                    💰 Cek Saldo Dompet
+                </button>
+                <button type="button" onclick="sendQuickPrompt('Ringkas pengeluaran bulan ini')" class="px-2.5 py-1 bg-orange-50 hover:bg-orange-100 text-orange-700 font-medium rounded-lg text-[11px] border border-orange-200/60 transition-colors">
+                    📊 Ringkas Pengeluaran
+                </button>
+                <button type="button" onclick="sendQuickPrompt('Bagaimana status budget kategori saya?')" class="px-2.5 py-1 bg-orange-50 hover:bg-orange-100 text-orange-700 font-medium rounded-lg text-[11px] border border-orange-200/60 transition-colors">
+                    🎯 Status Budget
+                </button>
+                <button type="button" onclick="sendQuickPrompt('Beri tips hemat dan budgeting minggu ini')" class="px-2.5 py-1 bg-orange-50 hover:bg-orange-100 text-orange-700 font-medium rounded-lg text-[11px] border border-orange-200/60 transition-colors">
+                    💡 Tips Hemat
+                </button>
+            </div>
+        </div>
+        <!-- Dynamic Chat Bubbles appended here -->
+    </div>
+
+    <!-- Typing Indicator (Hidden by default) -->
+    <div id="tata-ai-typing" class="px-4 py-2 bg-slate-50/60 flex items-center gap-2 text-slate-400 text-xs hidden">
+        <div class="w-6 h-6 rounded-full bg-orange-100 text-orange-600 flex items-center justify-center font-bold text-[10px]">AI</div>
+        <div class="flex items-center gap-1 bg-white px-3 py-1.5 rounded-full border border-slate-100 shadow-sm">
+            <span class="w-1.5 h-1.5 rounded-full bg-orange-400 animate-bounce"></span>
+            <span class="w-1.5 h-1.5 rounded-full bg-orange-400 animate-bounce [animation-delay:0.2s]"></span>
+            <span class="w-1.5 h-1.5 rounded-full bg-orange-400 animate-bounce [animation-delay:0.4s]"></span>
+        </div>
+        <span class="text-[11px] text-slate-400">Tata AI sedang menganalisa data...</span>
+    </div>
+
+    <!-- Chat Input Form -->
+    <form id="tata-ai-form" onsubmit="handleTataAISubmit(event)" class="p-3 bg-white border-t border-slate-100 flex items-center gap-2">
+        <input type="text" id="tata-ai-input" placeholder="Tanya saldo, budget, atau tips hemat..." autocomplete="off" class="flex-1 px-4 py-2.5 rounded-xl border border-slate-200 text-xs focus:ring-2 focus:ring-orange-500 focus:outline-none placeholder:text-slate-400">
+        <button type="submit" id="tata-ai-btn-send" class="w-10 h-10 rounded-xl bg-orange-500 text-white flex items-center justify-center hover:bg-orange-600 transition-colors shadow-md shadow-orange-500/20 disabled:opacity-50 flex-shrink-0">
+            <i data-lucide="send" class="w-4 h-4"></i>
+        </button>
+    </form>
 </div>
 {% endblock %}
 
@@ -331,8 +437,232 @@
         }
     }
 
+    // =========================================================================
+    // TATA AI CHATBOT CONTROLLER
+    // =========================================================================
+    let tataAIHistoryLoaded = false;
+
+    function escapeHtml(text) {
+        const div = document.createElement('div');
+        div.innerText = text;
+        return div.innerHTML;
+    }
+
+    function formatTataAIMarkdown(text) {
+        if (!text) return "";
+        let formatted = escapeHtml(text);
+        // Bold: **text**
+        formatted = formatted.replace(/\*\*(.*?)\*\*/g, '<b>$1</b>');
+        // Italic: *text*
+        formatted = formatted.replace(/\*(.*?)\*/g, '<i>$1</i>');
+        // Inline Code: `code`
+        formatted = formatted.replace(/`(.*?)`/g, '<code class="bg-slate-100 text-orange-600 px-1 py-0.5 rounded text-[10px] font-mono">$1</code>');
+        // Linebreaks: \n
+        formatted = formatted.replace(/\n/g, '<br>');
+        return formatted;
+    }
+
+    function toggleTataAIChat() {
+        const drawer = document.getElementById("tata-ai-drawer");
+        const botIcon = document.getElementById("tata-ai-icon-bot");
+        const closeIcon = document.getElementById("tata-ai-icon-close");
+        const pill = document.getElementById("tata-ai-pill");
+
+        if (!drawer) return;
+
+        const isHidden = drawer.classList.contains("hidden");
+        if (isHidden) {
+            drawer.classList.remove("hidden");
+            if (botIcon) botIcon.classList.add("hidden");
+            if (closeIcon) closeIcon.classList.remove("hidden");
+            if (pill) pill.classList.add("opacity-0");
+
+            if (!tataAIHistoryLoaded) {
+                loadTataAIChatHistory();
+            } else {
+                scrollTataAIToBottom();
+            }
+            setTimeout(() => {
+                const input = document.getElementById("tata-ai-input");
+                if (input) input.focus();
+            }, 100);
+        } else {
+            drawer.classList.add("hidden");
+            if (botIcon) botIcon.classList.remove("hidden");
+            if (closeIcon) closeIcon.classList.add("hidden");
+            if (pill) pill.classList.remove("opacity-0");
+        }
+
+        if (window.lucide) {
+            lucide.createIcons();
+        }
+    }
+
+    function scrollTataAIToBottom() {
+        const container = document.getElementById("tata-ai-messages");
+        if (container) {
+            container.scrollTop = container.scrollHeight;
+        }
+    }
+
+    async function loadTataAIChatHistory() {
+        try {
+            const res = await apiCall("/api/ai/chat/history");
+            tataAIHistoryLoaded = true;
+            const messages = res.messages || [];
+
+            if (messages.length > 0) {
+                const welcome = document.getElementById("tata-ai-welcome-box");
+                if (welcome) welcome.remove();
+
+                const container = document.getElementById("tata-ai-messages");
+                messages.forEach(m => {
+                    appendTataAIMessageBubble(m.role, m.message, false);
+                });
+                scrollTataAIToBottom();
+            }
+        } catch (err) {
+            console.error("Gagal memuat riwayat Tata AI:", err);
+        }
+    }
+
+    function appendTataAIMessageBubble(role, message, autoScroll = true) {
+        const container = document.getElementById("tata-ai-messages");
+        if (!container) return;
+
+        const bubbleWrapper = document.createElement("div");
+
+        if (role === "user") {
+            bubbleWrapper.className = "flex justify-end animate-in fade-in slide-in-from-right-2 duration-150";
+            bubbleWrapper.innerHTML = `
+                <div class="bg-gradient-to-r from-orange-500 to-orange-600 text-white rounded-2xl rounded-tr-none px-4 py-2.5 text-xs font-medium shadow-sm max-w-[85%] break-words">
+                    ${escapeHtml(message)}
+                </div>
+            `;
+        } else {
+            bubbleWrapper.className = "flex items-start gap-2 animate-in fade-in slide-in-from-left-2 duration-150";
+            bubbleWrapper.innerHTML = `
+                <div class="w-6 h-6 rounded-full bg-orange-100 text-orange-600 flex items-center justify-center font-bold text-[10px] flex-shrink-0 mt-0.5">
+                    AI
+                </div>
+                <div class="bg-white border border-slate-200/80 text-slate-800 rounded-2xl rounded-tl-none px-4 py-2.5 text-xs shadow-sm max-w-[88%] break-words leading-relaxed">
+                    ${formatTataAIMarkdown(message)}
+                </div>
+            `;
+        }
+
+        container.appendChild(bubbleWrapper);
+        if (autoScroll) {
+            scrollTataAIToBottom();
+        }
+    }
+
+    function sendQuickPrompt(promptText) {
+        const input = document.getElementById("tata-ai-input");
+        if (input) {
+            input.value = promptText;
+        }
+        submitTataAIMessage(promptText);
+    }
+
+    function handleTataAISubmit(e) {
+        e.preventDefault();
+        const input = document.getElementById("tata-ai-input");
+        if (!input) return;
+        const text = input.value.trim();
+        if (!text) return;
+        input.value = "";
+        submitTataAIMessage(text);
+    }
+
+    async function submitTataAIMessage(messageText) {
+        const welcome = document.getElementById("tata-ai-welcome-box");
+        if (welcome) welcome.remove();
+
+        // Render user message
+        appendTataAIMessageBubble("user", messageText);
+
+        const typingIndicator = document.getElementById("tata-ai-typing");
+        const sendBtn = document.getElementById("tata-ai-btn-send");
+        const input = document.getElementById("tata-ai-input");
+
+        if (typingIndicator) typingIndicator.classList.remove("hidden");
+        if (sendBtn) sendBtn.disabled = true;
+        if (input) input.disabled = true;
+        scrollTataAIToBottom();
+
+        try {
+            const res = await apiCall("/api/ai/chat/send", {
+                method: "POST",
+                body: JSON.stringify({ message: messageText })
+            });
+
+            if (res.reply) {
+                appendTataAIMessageBubble("assistant", res.reply);
+            }
+        } catch (err) {
+            appendTataAIMessageBubble("assistant", `⚠️ Maaf, terjadi kendala saat menghubungkan ke Tata AI: ${err.message || 'Coba sesaat lagi'}`);
+        } finally {
+            if (typingIndicator) typingIndicator.classList.add("hidden");
+            if (sendBtn) sendBtn.disabled = false;
+            if (input) {
+                input.disabled = false;
+                input.focus();
+            }
+            scrollTataAIToBottom();
+        }
+    }
+
+    async function confirmClearTataAIChat() {
+        if (!confirm("Hapus seluruh riwayat percakapan dengan Tata AI?")) {
+            return;
+        }
+
+        try {
+            await apiCall("/api/ai/chat/clear", { method: "DELETE" });
+            const container = document.getElementById("tata-ai-messages");
+            if (container) {
+                container.innerHTML = `
+                    <div id="tata-ai-welcome-box" class="bg-white p-3.5 rounded-2xl border border-slate-100 shadow-sm space-y-2">
+                        <div class="flex items-center gap-2 text-slate-800 font-bold">
+                            <span>👋</span>
+                            <span>Riwayat chat telah dibersihkan! Ada yang bisa Tata bantu?</span>
+                        </div>
+                        <p class="text-slate-500 leading-relaxed text-[11px]">
+                            Tanyakan apa saja seputar kondisi keuangan, saldo dompet, ringkasan pengeluaran, status anggaran, atau tips berhemat!
+                        </p>
+                        <div class="pt-1.5 flex flex-wrap gap-1.5">
+                            <button type="button" onclick="sendQuickPrompt('Berapa total saldo saya saat ini?')" class="px-2.5 py-1 bg-orange-50 hover:bg-orange-100 text-orange-700 font-medium rounded-lg text-[11px] border border-orange-200/60 transition-colors">
+                                💰 Cek Saldo Dompet
+                            </button>
+                            <button type="button" onclick="sendQuickPrompt('Ringkas pengeluaran bulan ini')" class="px-2.5 py-1 bg-orange-50 hover:bg-orange-100 text-orange-700 font-medium rounded-lg text-[11px] border border-orange-200/60 transition-colors">
+                                📊 Ringkas Pengeluaran
+                            </button>
+                            <button type="button" onclick="sendQuickPrompt('Bagaimana status budget kategori saya?')" class="px-2.5 py-1 bg-orange-50 hover:bg-orange-100 text-orange-700 font-medium rounded-lg text-[11px] border border-orange-200/60 transition-colors">
+                                🎯 Status Budget
+                            </button>
+                            <button type="button" onclick="sendQuickPrompt('Beri tips hemat dan budgeting minggu ini')" class="px-2.5 py-1 bg-orange-50 hover:bg-orange-100 text-orange-700 font-medium rounded-lg text-[11px] border border-orange-200/60 transition-colors">
+                                💡 Tips Hemat
+                            </button>
+                        </div>
+                    </div>
+                `;
+            }
+            showToast("Riwayat chat berhasil dibersihkan", "success");
+        } catch (err) {
+            showToast(err.message || "Gagal menghapus riwayat chat", "error");
+        }
+    }
+
     document.addEventListener("DOMContentLoaded", () => {
         loadQuickModalData();
+
+        // Check if redirected from protected admin route
+        const urlParams = new URLSearchParams(window.location.search);
+        if (urlParams.get("error") === "admin_only") {
+            showToast("Akses ditolak: Halaman tersebut khusus untuk Superadmin TataDana.", "error");
+            window.history.replaceState({}, document.title, window.location.pathname);
+        }
 
         const menuBtn = document.getElementById("mobile-menu-btn");
         const drawer = document.getElementById("mobile-drawer");

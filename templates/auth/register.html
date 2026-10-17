@@ -161,16 +161,17 @@
                  ============================================================= -->
             <div id="register-step-2" class="hidden">
                 <div class="text-center mb-6">
-                    <div class="w-12 h-12 rounded-2xl bg-orange-100 text-orange-600 flex items-center justify-center mx-auto mb-3 font-bold text-2xl shadow-sm">
-                        📱
+                    <div class="w-12 h-12 rounded-2xl bg-gradient-to-tr from-emerald-100 to-green-50 text-emerald-600 flex items-center justify-center mx-auto mb-3 font-bold text-2xl shadow-sm border border-emerald-200/60">
+                        💬
                     </div>
-                    <h2 class="text-xl font-black text-slate-900 tracking-tight">Verifikasi Nomor Handphone</h2>
-                    <p class="text-xs text-slate-500 mt-1">Masukkan 6-digit kode OTP yang dikirimkan ke nomor WhatsApp / SMS Anda.</p>
+                    <h2 class="text-xl font-black text-slate-900 tracking-tight">Verifikasi Nomor Handphone (WhatsApp OTP)</h2>
+                    <p class="text-xs text-slate-500 mt-1">Masukkan 6-digit kode OTP yang dikirimkan ke nomor WhatsApp Anda.</p>
                 </div>
 
                 <!-- OTP Demo Helper Badge -->
-                <div class="p-3 mb-5 rounded-2xl bg-orange-50 border border-orange-200 text-xs text-center text-orange-900">
-                    <span>Kode OTP Demo: <b id="otp-demo-display" class="font-mono text-sm font-black text-orange-600">123456</b></span>
+                <div class="p-3 mb-5 rounded-2xl bg-orange-50 border border-orange-200 text-xs text-center text-orange-900 flex items-center justify-between">
+                    <span class="text-[11px] text-orange-800">Kode OTP Demo:</span>
+                    <b id="otp-demo-display" class="font-mono text-sm font-black text-orange-600 tracking-wider">123456</b>
                 </div>
 
                 <form onsubmit="handleVerifyOtpSubmit(event)" class="space-y-4">
@@ -180,7 +181,7 @@
                     </div>
 
                     <button type="submit" id="btn-otp-submit" class="btn-primary w-full py-3 rounded-xl text-xs sm:text-sm font-bold shadow-md shadow-orange-500/20 flex items-center justify-center gap-2">
-                        <span id="btn-otp-text">Verifikasi OTP</span>
+                        <span id="btn-otp-text">Verifikasi WhatsApp</span>
                         <span id="btn-otp-spinner" class="hidden">
                             <svg class="animate-spin h-4 w-4 text-white" fill="none" viewBox="0 0 24 24">
                                 <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
@@ -189,9 +190,15 @@
                         </span>
                     </button>
 
-                    <button type="button" onclick="handleResendOtp()" class="w-full text-center text-xs font-semibold text-slate-500 hover:text-orange-600 transition-colors pt-1">
-                        Belum menerima kode? <span class="underline">Kirim Ulang OTP</span>
-                    </button>
+                    <!-- Resend Countdown Timer -->
+                    <div class="pt-2 text-center">
+                        <p id="reg-resend-countdown" class="text-xs text-slate-500">
+                            Kirim ulang kode dalam <span id="reg-timer-seconds" class="font-mono font-bold text-orange-600">60</span> detik
+                        </p>
+                        <button id="reg-btn-resend" type="button" onclick="handleResendOtp()" class="hidden w-full text-center text-xs font-bold text-orange-600 hover:text-orange-700 transition-colors py-1">
+                            💬 Kirim Ulang Kode via WhatsApp
+                        </button>
+                    </div>
                 </form>
             </div>
 
@@ -359,13 +366,40 @@
             // Switch to Step 2 OTP
             document.getElementById("register-step-1").classList.add("hidden");
             document.getElementById("register-step-2").classList.remove("hidden");
-            showToast("Akun berhasil dibuat! Silakan verifikasi OTP nomor HP Anda.", "info");
+            startRegisterCountdown();
+            showToast("Akun berhasil dibuat! Silakan verifikasi OTP WhatsApp Anda.", "info");
         } catch (err) {
             showToast(err.message || "Gagal membuat akun.", "error");
             btn.disabled = false;
             btnText.innerText = "Daftar & Verifikasi OTP";
             btnSpinner.classList.add("hidden");
         }
+    }
+
+    let regCountdownValue = 60;
+    let regCountdownInterval = null;
+
+    function startRegisterCountdown() {
+        regCountdownValue = 60;
+        const countdownWrapper = document.getElementById("reg-resend-countdown");
+        const btnResend = document.getElementById("reg-btn-resend");
+        const timerSeconds = document.getElementById("reg-timer-seconds");
+
+        if (countdownWrapper) countdownWrapper.classList.remove("hidden");
+        if (btnResend) btnResend.classList.add("hidden");
+        if (timerSeconds) timerSeconds.innerText = regCountdownValue;
+
+        clearInterval(regCountdownInterval);
+        regCountdownInterval = setInterval(() => {
+            regCountdownValue--;
+            if (timerSeconds) timerSeconds.innerText = regCountdownValue;
+
+            if (regCountdownValue <= 0) {
+                clearInterval(regCountdownInterval);
+                if (countdownWrapper) countdownWrapper.classList.add("hidden");
+                if (btnResend) btnResend.classList.remove("hidden");
+            }
+        }, 1000);
     }
 
     async function handleVerifyOtpSubmit(e) {
@@ -378,16 +412,17 @@
         const btnSpinner = document.getElementById("btn-otp-spinner");
 
         btn.disabled = true;
-        btnText.innerText = "Memverifikasi OTP...";
+        btnText.innerText = "Memverifikasi WhatsApp...";
         btnSpinner.classList.remove("hidden");
 
         try {
-            await apiCall("/api/auth/verify-otp", {
+            await apiCall("/api/auth/verify-whatsapp-otp", {
                 method: "POST",
                 body: JSON.stringify({ user_id, otp_code })
             });
 
-            showToast("Nomor HP berhasil diverifikasi!", "success");
+            clearInterval(regCountdownInterval);
+            showToast("Nomor WhatsApp berhasil diverifikasi!", "success");
 
             // Switch to Step 3: Onboarding Wizard
             document.getElementById("register-step-2").classList.add("hidden");
@@ -395,19 +430,20 @@
         } catch (err) {
             showToast(err.message || "Kode OTP tidak cocok.", "error");
             btn.disabled = false;
-            btnText.innerText = "Verifikasi OTP";
+            btnText.innerText = "Verifikasi WhatsApp";
             btnSpinner.classList.add("hidden");
         }
     }
 
     async function handleResendOtp() {
         try {
-            const res = await apiCall("/api/auth/resend-otp", {
+            const res = await apiCall("/api/auth/send-whatsapp-otp", {
                 method: "POST",
                 body: JSON.stringify({ user_id: currentUserId })
             });
             document.getElementById("otp-demo-display").innerText = res.otp_preview;
-            showToast("Kode OTP baru telah dikirimkan!", "success");
+            showToast("Kode OTP baru telah dikirimkan via WhatsApp!", "success");
+            startRegisterCountdown();
         } catch (err) {
             showToast(err.message || "Gagal mengirim ulang OTP.", "error");
         }

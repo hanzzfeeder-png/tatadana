@@ -11,6 +11,9 @@ router = APIRouter(prefix="/api/reports", tags=["Reports"])
 class ExportRequest(BaseModel):
     start_date: Optional[str] = None
     end_date: Optional[str] = None
+    category_id: Optional[str] = None
+    wallet_id: Optional[str] = None
+    type: Optional[str] = None
 
 @router.get("/summary")
 def get_summary(
@@ -52,7 +55,14 @@ def get_table(
 @router.post("/export/excel")
 def export_excel(req: ExportRequest, user: dict = Depends(get_current_user)):
     try:
-        file_name = ReportService.generate_excel_report(user["id"], req.start_date, req.end_date)
+        file_name = ReportService.generate_excel_report(
+            user["id"],
+            start_date=req.start_date,
+            end_date=req.end_date,
+            category_id=req.category_id,
+            wallet_id=req.wallet_id,
+            tx_type=req.type
+        )
         return {
             "success": True,
             "file_name": file_name,
@@ -66,7 +76,14 @@ def export_excel(req: ExportRequest, user: dict = Depends(get_current_user)):
 @router.post("/export/pdf")
 def export_pdf(req: ExportRequest, user: dict = Depends(get_current_user)):
     try:
-        file_name = ReportService.generate_pdf_report(user["id"], req.start_date, req.end_date)
+        file_name = ReportService.generate_pdf_report(
+            user["id"],
+            start_date=req.start_date,
+            end_date=req.end_date,
+            category_id=req.category_id,
+            wallet_id=req.wallet_id,
+            tx_type=req.type
+        )
         return {
             "success": True,
             "file_name": file_name,
@@ -88,4 +105,8 @@ def download_export_file(file_name: str):
         raise HTTPException(status_code=404, detail="File laporan tidak ditemukan atau telah kedaluwarsa.")
     
     media_type = "application/pdf" if file_name.endswith(".pdf") else "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
-    return FileResponse(file_path, media_type=media_type, filename=file_name)
+    headers = {
+        "Content-Disposition": f'attachment; filename="{file_name}"',
+        "Cache-Control": "no-cache, no-store, must-revalidate"
+    }
+    return FileResponse(file_path, media_type=media_type, filename=file_name, headers=headers)

@@ -249,6 +249,34 @@ def init_db():
     );
     """)
 
+    # Calendar Daily Notes
+    cursor.execute("""
+    CREATE TABLE IF NOT EXISTS calendar_daily_notes (
+        id TEXT PRIMARY KEY,
+        user_id TEXT NOT NULL,
+        note_date TEXT NOT NULL,
+        note_text TEXT NOT NULL,
+        mood TEXT DEFAULT 'neutral',
+        created_at TEXT,
+        updated_at TEXT,
+        UNIQUE(user_id, note_date),
+        FOREIGN KEY (user_id) REFERENCES profiles(id) ON DELETE CASCADE
+    );
+    """)
+
+    # AI Chat Messages
+    cursor.execute("""
+    CREATE TABLE IF NOT EXISTS ai_chat_messages (
+        id TEXT PRIMARY KEY,
+        user_id TEXT NOT NULL,
+        role TEXT NOT NULL,
+        message TEXT NOT NULL,
+        tokens INTEGER DEFAULT 0,
+        created_at TEXT,
+        FOREIGN KEY (user_id) REFERENCES profiles(id) ON DELETE CASCADE
+    );
+    """)
+
     conn.commit()
     seed_initial_data(conn)
     conn.close()

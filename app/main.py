@@ -19,6 +19,8 @@ from app.api.telegram import router as telegram_router
 from app.api.payments import router as payments_router
 from app.api.admin import router as admin_router
 from app.api.settings import router as settings_router
+from app.api.calendar import router as calendar_router
+from app.api.ai_chat import router as ai_chat_router
 
 # Initialize FastAPI App
 app = FastAPI(
@@ -51,6 +53,8 @@ app.include_router(telegram_router)
 app.include_router(payments_router)
 app.include_router(admin_router)
 app.include_router(settings_router)
+app.include_router(calendar_router)
+app.include_router(ai_chat_router)
 
 # =============================================================================
 # WEB PAGE ROUTES (FRONTEND RENDERING)
@@ -76,6 +80,15 @@ def page_register(request: Request):
     if user:
         return RedirectResponse(url="/dashboard")
     return templates.TemplateResponse(request=request, name="auth/register.html", context={})
+
+@app.get("/verify-otp", response_class=HTMLResponse)
+def page_verify_otp(request: Request):
+    user = get_current_user_optional(request)
+    if not user:
+        return RedirectResponse(url="/login", status_code=302)
+    if user.get("phone_verified"):
+        return RedirectResponse(url="/dashboard", status_code=302)
+    return templates.TemplateResponse(request=request, name="auth/verify_otp.html", context={"user": user})
 
 @app.get("/privacy", response_class=HTMLResponse)
 def page_privacy(request: Request):
@@ -104,6 +117,16 @@ def page_dashboard_transaksi(request: Request):
     return templates.TemplateResponse(request=request, name="dashboard/transaksi.html", context={
         "user": user,
         "active_page": "transaksi"
+    })
+
+@app.get("/dashboard/kalender", response_class=HTMLResponse)
+def page_dashboard_kalender(request: Request):
+    user = get_current_user_optional(request)
+    if not user:
+        return RedirectResponse(url="/login")
+    return templates.TemplateResponse(request=request, name="dashboard/kalender.html", context={
+        "user": user,
+        "active_page": "kalender"
     })
 
 @app.get("/dashboard/laporan", response_class=HTMLResponse)
@@ -151,12 +174,27 @@ def check_admin_web_access(user: Optional[dict]) -> bool:
         return False
     return (user.get("role") in ("superadmin", "admin")) or bool(user.get("is_admin"))
 
+def admin_web_guard(request: Request) -> Optional[RedirectResponse]:
+    """
+    Role-Based Access Control (RBAC) Guard untuk rute web Admin Panel (/admin/*):
+    - Jika belum login -> redirect ke /login
+    - Jika login sebagai user biasa (bukan superadmin) -> redirect ke /dashboard?error=admin_only
+    - Jika superadmin/admin -> lolos (None)
+    """
+    user = get_current_user_optional(request)
+    if not user:
+        return RedirectResponse(url="/login", status_code=302)
+    if not check_admin_web_access(user):
+        return RedirectResponse(url="/dashboard?error=admin_only", status_code=302)
+    return None
+
 # Admin Pages
 @app.get("/admin", response_class=HTMLResponse)
 def page_admin_index(request: Request):
+    guard = admin_web_guard(request)
+    if guard:
+        return guard
     user = get_current_user_optional(request)
-    if not check_admin_web_access(user):
-        return RedirectResponse(url="/login")
     return templates.TemplateResponse(request=request, name="admin/index.html", context={
         "user": user,
         "active_admin_page": "overview"
@@ -164,9 +202,10 @@ def page_admin_index(request: Request):
 
 @app.get("/admin/ai-providers", response_class=HTMLResponse)
 def page_admin_ai_providers(request: Request):
+    guard = admin_web_guard(request)
+    if guard:
+        return guard
     user = get_current_user_optional(request)
-    if not check_admin_web_access(user):
-        return RedirectResponse(url="/login")
     return templates.TemplateResponse(request=request, name="admin/ai_providers.html", context={
         "user": user,
         "active_admin_page": "ai_providers"
@@ -174,9 +213,10 @@ def page_admin_ai_providers(request: Request):
 
 @app.get("/admin/users", response_class=HTMLResponse)
 def page_admin_users(request: Request):
+    guard = admin_web_guard(request)
+    if guard:
+        return guard
     user = get_current_user_optional(request)
-    if not check_admin_web_access(user):
-        return RedirectResponse(url="/login")
     return templates.TemplateResponse(request=request, name="admin/users.html", context={
         "user": user,
         "active_admin_page": "users"
@@ -184,9 +224,10 @@ def page_admin_users(request: Request):
 
 @app.get("/admin/payments", response_class=HTMLResponse)
 def page_admin_payments(request: Request):
+    guard = admin_web_guard(request)
+    if guard:
+        return guard
     user = get_current_user_optional(request)
-    if not check_admin_web_access(user):
-        return RedirectResponse(url="/login")
     return templates.TemplateResponse(request=request, name="admin/payments.html", context={
         "user": user,
         "active_admin_page": "payments"
@@ -194,9 +235,10 @@ def page_admin_payments(request: Request):
 
 @app.get("/admin/ai-logs", response_class=HTMLResponse)
 def page_admin_ai_logs(request: Request):
+    guard = admin_web_guard(request)
+    if guard:
+        return guard
     user = get_current_user_optional(request)
-    if not check_admin_web_access(user):
-        return RedirectResponse(url="/login")
     return templates.TemplateResponse(request=request, name="admin/ai_logs.html", context={
         "user": user,
         "active_admin_page": "ai_logs"
@@ -204,9 +246,10 @@ def page_admin_ai_logs(request: Request):
 
 @app.get("/admin/audit-logs", response_class=HTMLResponse)
 def page_admin_audit_logs(request: Request):
+    guard = admin_web_guard(request)
+    if guard:
+        return guard
     user = get_current_user_optional(request)
-    if not check_admin_web_access(user):
-        return RedirectResponse(url="/login")
     return templates.TemplateResponse(request=request, name="admin/audit_logs.html", context={
         "user": user,
         "active_admin_page": "audit_logs"

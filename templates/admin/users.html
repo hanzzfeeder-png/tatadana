@@ -38,7 +38,7 @@
                 <thead>
                     <tr class="border-b border-slate-100 text-slate-400 uppercase font-semibold bg-white">
                         <th class="py-3 px-4">Pengguna</th>
-                        <th class="py-3 px-4">Kontak (HP)</th>
+                        <th class="py-3 px-4">Kontak & Verifikasi</th>
                         <th class="py-3 px-4">Bot Telegram</th>
                         <th class="py-3 px-4">Paket Plan</th>
                         <th class="py-3 px-4">Total Tx</th>
@@ -95,6 +95,136 @@
         </div>
     </div>
 </div>
+
+<!-- Modal: Detail Profil Lengkap Pengguna (Admin Inspection) -->
+<div id="user-detail-modal" class="fixed inset-0 bg-slate-900/50 backdrop-blur-sm z-50 hidden items-center justify-center p-4">
+    <div class="bg-white border border-slate-200 rounded-2xl max-w-3xl w-full p-6 shadow-2xl relative text-slate-800 max-h-[90vh] flex flex-col">
+        <button onclick="closeModal('user-detail-modal')" class="absolute top-5 right-5 text-slate-400 hover:text-slate-600 text-xl font-bold">&times;</button>
+        
+        <!-- Header / User Info -->
+        <div id="user-detail-header" class="border-b border-slate-100 pb-4">
+            <div class="flex items-center gap-4">
+                <div id="detail-avatar-container" class="w-14 h-14 rounded-2xl bg-orange-100 text-orange-600 flex items-center justify-center text-xl font-black shrink-0 overflow-hidden border border-orange-200">
+                    <!-- Image or Initials -->
+                </div>
+                <div class="flex-1 min-w-0">
+                    <div class="flex items-center gap-2 flex-wrap">
+                        <h3 id="detail-full-name" class="text-base font-extrabold text-slate-900 truncate">Nama Pengguna</h3>
+                        <span id="detail-role-badge" class="px-2 py-0.5 rounded-full text-[10px] font-bold uppercase tracking-wider bg-purple-100 text-purple-700 border border-purple-200">USER</span>
+                        <span id="detail-plan-badge" class="px-2 py-0.5 rounded-full text-[10px] font-bold uppercase tracking-wider bg-amber-100 text-amber-800 border border-amber-300">FREE</span>
+                    </div>
+                    <p id="detail-email" class="text-xs text-slate-500 truncate mt-0.5">user@example.com</p>
+                    <div class="flex items-center gap-3 mt-1.5 text-xs text-slate-600 flex-wrap">
+                        <span id="detail-phone" class="font-mono text-slate-700">-</span>
+                        <span id="detail-wa-badge" class="inline-flex items-center text-[10px] font-bold px-2 py-0.5 rounded-full"></span>
+                        <span id="detail-created" class="text-slate-400 text-[11px]"></span>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Content Body Scrollable -->
+        <div class="overflow-y-auto my-4 flex-1 space-y-4 pr-1">
+            <!-- Financial Summary Stats Grid -->
+            <div class="grid grid-cols-2 md:grid-cols-4 gap-3">
+                <div class="p-3 rounded-xl bg-slate-50 border border-slate-200/80">
+                    <p class="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Total Saldo Likuid</p>
+                    <p id="detail-total-balance" class="text-sm font-extrabold text-slate-900 mt-1">Rp 0</p>
+                </div>
+                <div class="p-3 rounded-xl bg-emerald-50/60 border border-emerald-200/60">
+                    <p class="text-[10px] font-bold text-emerald-600 uppercase tracking-wider">Total Pemasukan</p>
+                    <p id="detail-total-income" class="text-sm font-extrabold text-emerald-700 mt-1">Rp 0</p>
+                </div>
+                <div class="p-3 rounded-xl bg-rose-50/60 border border-rose-200/60">
+                    <p class="text-[10px] font-bold text-rose-600 uppercase tracking-wider">Total Pengeluaran</p>
+                    <p id="detail-total-expense" class="text-sm font-extrabold text-rose-700 mt-1">Rp 0</p>
+                </div>
+                <div class="p-3 rounded-xl bg-blue-50/60 border border-blue-200/60">
+                    <p class="text-[10px] font-bold text-blue-600 uppercase tracking-wider">Arus Kas Bersih</p>
+                    <p id="detail-net-cashflow" class="text-sm font-extrabold text-blue-700 mt-1">Rp 0</p>
+                </div>
+            </div>
+
+            <!-- Two Columns: Telegram Integration & Subscription -->
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-3">
+                <!-- Telegram Info -->
+                <div class="p-3.5 rounded-xl border border-slate-200 bg-slate-50/40 space-y-2">
+                    <div class="flex items-center justify-between">
+                        <span class="text-xs font-bold text-slate-800 flex items-center gap-1.5">
+                            <i data-lucide="send" class="w-3.5 h-3.5 text-sky-500"></i> Bot Telegram
+                        </span>
+                        <span id="detail-tg-status" class="px-2 py-0.5 rounded-full text-[10px] font-bold"></span>
+                    </div>
+                    <div id="detail-tg-body" class="text-xs space-y-1 text-slate-600 pt-0.5">
+                        <!-- Dynamic Telegram details -->
+                    </div>
+                </div>
+
+                <!-- Subscription Info -->
+                <div class="p-3.5 rounded-xl border border-slate-200 bg-slate-50/40 space-y-2">
+                    <div class="flex items-center justify-between">
+                        <span class="text-xs font-bold text-slate-800 flex items-center gap-1.5">
+                            <i data-lucide="crown" class="w-3.5 h-3.5 text-amber-500"></i> Langganan & Paket
+                        </span>
+                        <span id="detail-sub-badge" class="px-2 py-0.5 rounded-full text-[10px] font-bold"></span>
+                    </div>
+                    <div id="detail-sub-body" class="text-xs space-y-1 text-slate-600 pt-0.5">
+                        <!-- Dynamic Subscription details -->
+                    </div>
+                </div>
+            </div>
+
+            <!-- Wallets List -->
+            <div class="border border-slate-200 rounded-xl overflow-hidden">
+                <div class="px-3.5 py-2 bg-slate-50 border-b border-slate-200 flex items-center justify-between">
+                    <span class="text-xs font-bold text-slate-800 flex items-center gap-1.5">
+                        <i data-lucide="wallet" class="w-3.5 h-3.5 text-orange-500"></i> Daftar Dompet & Akun Keuangan
+                    </span>
+                    <span id="detail-wallets-count" class="text-[11px] text-slate-500 font-semibold">0 Dompet</span>
+                </div>
+                <div id="detail-wallets-list" class="divide-y divide-slate-100 text-xs">
+                    <!-- Rendered wallets -->
+                </div>
+            </div>
+
+            <!-- Categories & Monthly Budgets -->
+            <div class="border border-slate-200 rounded-xl overflow-hidden">
+                <div class="px-3.5 py-2 bg-slate-50 border-b border-slate-200 flex items-center justify-between">
+                    <span class="text-xs font-bold text-slate-800 flex items-center gap-1.5">
+                        <i data-lucide="pie-chart" class="w-3.5 h-3.5 text-purple-500"></i> Kategori & Anggaran Bulanan
+                    </span>
+                    <span id="detail-categories-count" class="text-[11px] text-slate-500 font-semibold">0 Kategori</span>
+                </div>
+                <div id="detail-categories-list" class="grid grid-cols-1 md:grid-cols-2 gap-2 p-3 text-xs max-h-36 overflow-y-auto">
+                    <!-- Rendered categories -->
+                </div>
+            </div>
+
+            <!-- Recent Transactions (5) -->
+            <div class="border border-slate-200 rounded-xl overflow-hidden">
+                <div class="px-3.5 py-2 bg-slate-50 border-b border-slate-200 flex items-center justify-between">
+                    <span class="text-xs font-bold text-slate-800 flex items-center gap-1.5">
+                        <i data-lucide="clock" class="w-3.5 h-3.5 text-slate-500"></i> 5 Transaksi Terakhir
+                    </span>
+                </div>
+                <div id="detail-recent-txs" class="divide-y divide-slate-100 text-xs">
+                    <!-- Rendered recent transactions -->
+                </div>
+            </div>
+        </div>
+
+        <!-- Footer -->
+        <div class="pt-3 border-t border-slate-100 flex items-center justify-between">
+            <button id="detail-btn-impersonate" class="px-3.5 py-2 rounded-xl text-xs font-bold bg-orange-500 hover:bg-orange-600 text-white shadow-sm transition-all flex items-center gap-1.5">
+                <i data-lucide="external-link" class="w-3.5 h-3.5"></i>
+                <span>Masuk Akun Pengguna</span>
+            </button>
+            <button onclick="closeModal('user-detail-modal')" class="px-4 py-2 rounded-xl text-xs font-semibold bg-slate-100 text-slate-700 hover:bg-slate-200">
+                Tutup
+            </button>
+        </div>
+    </div>
+</div>
 {% endblock %}
 
 {% block scripts %}
@@ -129,8 +259,14 @@
                         <div class="font-bold text-slate-900">${u.full_name}</div>
                         <div class="text-[11px] text-slate-400">${u.email}</div>
                     </td>
-                    <td class="py-3 px-4 font-mono text-slate-600">
-                        ${u.phone_number || '<span class="text-slate-300">-</span>'}
+                    <td class="py-3 px-4">
+                        <div class="font-mono text-slate-700">${u.phone_number || '<span class="text-slate-300">-</span>'}</div>
+                        <div class="mt-0.5">
+                            ${u.phone_verified ? 
+                                '<span class="inline-flex items-center gap-0.5 text-[10px] text-emerald-700 font-bold bg-emerald-50 px-1.5 py-0.5 rounded border border-emerald-200">✓ WA Verified</span>' : 
+                                '<span class="inline-flex items-center gap-0.5 text-[10px] text-slate-400 bg-slate-50 px-1.5 py-0.5 rounded border border-slate-200">Belum Verifikasi</span>'
+                            }
+                        </div>
                     </td>
                     <td class="py-3 px-4">
                         <span class="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[10px] font-bold ${u.is_tg_connected ? 'bg-emerald-50 text-emerald-700 border border-emerald-200' : 'bg-slate-100 text-slate-500'}">
@@ -145,6 +281,9 @@
                     <td class="py-3 px-4 font-semibold text-slate-800">${u.total_txs} tx</td>
                     <td class="py-3 px-4 text-slate-400 text-[11px]">${(u.created_at || '').slice(0, 10)}</td>
                     <td class="py-3 px-4 text-right space-x-1.5 whitespace-nowrap">
+                        <button onclick="viewUserDetail('${u.id}')" class="px-2.5 py-1.5 rounded-xl text-xs font-semibold bg-purple-50 hover:bg-purple-100 text-purple-700 border border-purple-200/80 transition-colors" title="Lihat profil detail akun">
+                            Lihat Profil
+                        </button>
                         <button onclick="viewUserTransactions('${u.id}', '${u.full_name}')" class="px-2.5 py-1.5 rounded-xl text-xs font-semibold bg-slate-100 hover:bg-slate-200 text-slate-700 transition-colors" title="Lihat transaksi pengguna untuk troubleshooting">
                             Cek Transaksi
                         </button>
@@ -158,6 +297,192 @@
             if (window.lucide) window.lucide.createIcons();
         } catch (e) {
             tbody.innerHTML = `<tr><td colspan="7" class="py-8 text-center text-rose-500">Gagal memuat pengguna: ${e.message}</td></tr>`;
+        }
+    }
+
+    async function viewUserDetail(userId) {
+        openModal("user-detail-modal");
+        const avatarContainer = document.getElementById("detail-avatar-container");
+        avatarContainer.innerHTML = `<span class="animate-pulse text-xs">...</span>`;
+        document.getElementById("detail-full-name").innerText = "Memuat data...";
+        document.getElementById("detail-email").innerText = "";
+        document.getElementById("detail-phone").innerText = "";
+        document.getElementById("detail-wa-badge").className = "hidden";
+        document.getElementById("detail-created").innerText = "";
+        
+        document.getElementById("detail-total-balance").innerText = "Rp ...";
+        document.getElementById("detail-total-income").innerText = "Rp ...";
+        document.getElementById("detail-total-expense").innerText = "Rp ...";
+        document.getElementById("detail-net-cashflow").innerText = "Rp ...";
+
+        document.getElementById("detail-tg-body").innerHTML = `<p class="text-slate-400">Memuat...</p>`;
+        document.getElementById("detail-sub-body").innerHTML = `<p class="text-slate-400">Memuat...</p>`;
+        document.getElementById("detail-wallets-list").innerHTML = `<p class="p-3 text-center text-slate-400">Memuat dompet...</p>`;
+        document.getElementById("detail-categories-list").innerHTML = `<p class="p-3 text-center text-slate-400">Memuat kategori...</p>`;
+        document.getElementById("detail-recent-txs").innerHTML = `<p class="p-3 text-center text-slate-400">Memuat transaksi...</p>`;
+
+        try {
+            const res = await apiCall(`/api/admin/users/${userId}/detail`);
+            const p = res.profile || {};
+            const tg = res.telegram || {};
+            const wallets = res.wallets || [];
+            const categories = res.categories || [];
+            const summary = res.financial_summary || {};
+            const sub = res.subscription;
+            const recentTxs = res.recent_transactions || [];
+
+            // Avatar
+            if (p.avatar_url) {
+                avatarContainer.innerHTML = `<img src="${p.avatar_url}" class="w-full h-full object-cover rounded-2xl" alt="${p.full_name}">`;
+            } else {
+                const initials = (p.full_name || 'U').split(' ').map(n => n[0]).slice(0, 2).join('').toUpperCase();
+                avatarContainer.innerHTML = `<span>${initials}</span>`;
+            }
+
+            // Profile text
+            document.getElementById("detail-full-name").innerText = p.full_name || 'Tanpa Nama';
+            document.getElementById("detail-email").innerText = p.email || '-';
+            document.getElementById("detail-phone").innerText = p.phone_number || 'Tidak ada nomor telepon';
+            
+            // Badges
+            const roleEl = document.getElementById("detail-role-badge");
+            roleEl.innerText = (p.role || 'user').toUpperCase();
+            roleEl.className = p.role === 'admin' 
+                ? "px-2 py-0.5 rounded-full text-[10px] font-bold uppercase tracking-wider bg-purple-100 text-purple-700 border border-purple-200" 
+                : "px-2 py-0.5 rounded-full text-[10px] font-bold uppercase tracking-wider bg-slate-100 text-slate-600 border border-slate-200";
+
+            const planEl = document.getElementById("detail-plan-badge");
+            planEl.innerText = (p.plan || 'free').toUpperCase();
+            planEl.className = p.plan === 'pro'
+                ? "px-2 py-0.5 rounded-full text-[10px] font-bold uppercase tracking-wider bg-amber-100 text-amber-800 border border-amber-300"
+                : "px-2 py-0.5 rounded-full text-[10px] font-bold uppercase tracking-wider bg-slate-100 text-slate-600 border border-slate-200";
+
+            const waBadge = document.getElementById("detail-wa-badge");
+            if (p.phone_verified) {
+                waBadge.className = "inline-flex items-center text-[10px] font-bold px-2 py-0.5 rounded-full bg-emerald-50 text-emerald-700 border border-emerald-200";
+                waBadge.innerText = "✓ WA Terverifikasi";
+            } else {
+                waBadge.className = "inline-flex items-center text-[10px] font-medium px-2 py-0.5 rounded-full bg-slate-100 text-slate-500 border border-slate-200";
+                waBadge.innerText = "○ Belum Terverifikasi";
+            }
+
+            document.getElementById("detail-created").innerText = `Bergabung: ${(p.created_at || '').slice(0, 10)}`;
+
+            // Impersonate button hook
+            const btnImp = document.getElementById("detail-btn-impersonate");
+            btnImp.onclick = () => handleImpersonate(p.id, p.full_name);
+
+            // Stats
+            document.getElementById("detail-total-balance").innerText = formatIDR(res.total_balance || 0);
+            document.getElementById("detail-total-income").innerText = formatIDR(summary.total_income || 0);
+            document.getElementById("detail-total-expense").innerText = formatIDR(summary.total_expense || 0);
+            const net = (summary.net_cashflow || 0);
+            const netEl = document.getElementById("detail-net-cashflow");
+            netEl.innerText = `${net >= 0 ? '+' : ''}${formatIDR(net)}`;
+            netEl.className = `text-sm font-extrabold mt-1 ${net >= 0 ? 'text-blue-700' : 'text-rose-600'}`;
+
+            // Telegram
+            const tgStatus = document.getElementById("detail-tg-status");
+            if (tg.is_active) {
+                tgStatus.className = "px-2 py-0.5 rounded-full text-[10px] font-bold bg-emerald-50 text-emerald-700 border border-emerald-200";
+                tgStatus.innerText = "🟢 Terhubung";
+                document.getElementById("detail-tg-body").innerHTML = `
+                    <div><b>Username:</b> @${tg.telegram_username || '-'}</div>
+                    <div><b>Telegram User ID:</b> <span class="font-mono">${tg.telegram_user_id || '-'}</span></div>
+                    <div><b>Telegram Chat ID:</b> <span class="font-mono">${tg.telegram_chat_id || '-'}</span></div>
+                `;
+            } else {
+                tgStatus.className = "px-2 py-0.5 rounded-full text-[10px] font-bold bg-slate-100 text-slate-500";
+                tgStatus.innerText = "⚪ Belum Terhubung";
+                document.getElementById("detail-tg-body").innerHTML = `
+                    <p class="text-slate-400">Pengguna belum menautkan akun bot Telegram TataDana.</p>
+                `;
+            }
+
+            // Subscription
+            const subBadge = document.getElementById("detail-sub-badge");
+            if (sub && sub.is_approved) {
+                subBadge.className = "px-2 py-0.5 rounded-full text-[10px] font-bold bg-amber-50 text-amber-700 border border-amber-200";
+                subBadge.innerText = "★ AKTIF";
+                document.getElementById("detail-sub-body").innerHTML = `
+                    <div><b>Paket:</b> ${sub.plan.toUpperCase()}</div>
+                    <div><b>Status:</b> ${sub.status}</div>
+                    <div><b>Metode:</b> ${sub.payment_type || 'Manual'}</div>
+                    <div><b>Order ID:</b> <span class="font-mono text-[11px]">${sub.order_id || '-'}</span></div>
+                `;
+            } else {
+                subBadge.className = "px-2 py-0.5 rounded-full text-[10px] font-bold bg-slate-100 text-slate-500";
+                subBadge.innerText = p.plan === 'pro' ? 'PRO MANUAL' : 'FREE';
+                document.getElementById("detail-sub-body").innerHTML = `
+                    <p class="text-slate-500">Tier: <b>${p.plan.toUpperCase()}</b>. ${p.plan === 'free' ? 'Belum berlangganan paket berbayar.' : 'Akses PRO aktif.'}</p>
+                `;
+            }
+
+            // Wallets
+            const walletsList = document.getElementById("detail-wallets-list");
+            document.getElementById("detail-wallets-count").innerText = `${wallets.length} Dompet`;
+            if (wallets.length === 0) {
+                walletsList.innerHTML = `<p class="p-3 text-center text-slate-400">Belum ada dompet terdaftar.</p>`;
+            } else {
+                walletsList.innerHTML = wallets.map(w => `
+                    <div class="px-3.5 py-2.5 flex items-center justify-between hover:bg-slate-50">
+                        <div class="flex items-center gap-2">
+                            <span class="text-base">${w.icon || '💳'}</span>
+                            <div>
+                                <span class="font-bold text-slate-800">${w.name}</span>
+                                ${w.is_default ? '<span class="ml-1.5 px-1.5 py-0.5 text-[9px] bg-orange-100 text-orange-700 font-bold rounded">Utama</span>' : ''}
+                                <span class="text-[10px] text-slate-400 block capitalize">${w.type || 'cash'}</span>
+                            </div>
+                        </div>
+                        <span class="font-bold text-slate-900">${formatIDR(w.balance)}</span>
+                    </div>
+                `).join('');
+            }
+
+            // Categories
+            const catList = document.getElementById("detail-categories-list");
+            document.getElementById("detail-categories-count").innerText = `${categories.length} Kategori`;
+            if (categories.length === 0) {
+                catList.innerHTML = `<p class="p-3 col-span-2 text-center text-slate-400">Belum ada kategori terdaftar.</p>`;
+            } else {
+                catList.innerHTML = categories.map(c => `
+                    <div class="p-2 rounded-lg bg-slate-50 border border-slate-100 flex items-center justify-between">
+                        <div class="flex items-center gap-2 truncate">
+                            <span>${c.icon || '🏷️'}</span>
+                            <span class="font-semibold text-slate-700 truncate">${c.name}</span>
+                        </div>
+                        <span class="text-[11px] font-bold ${c.monthly_budget > 0 ? 'text-amber-700' : 'text-slate-400'} shrink-0">
+                            ${c.monthly_budget > 0 ? formatIDR(c.monthly_budget) : 'No limit'}
+                        </span>
+                    </div>
+                `).join('');
+            }
+
+            // Recent Transactions
+            const txList = document.getElementById("detail-recent-txs");
+            if (recentTxs.length === 0) {
+                txList.innerHTML = `<p class="p-3 text-center text-slate-400">Belum ada aktivitas transaksi.</p>`;
+            } else {
+                txList.innerHTML = recentTxs.map(t => `
+                    <div class="px-3.5 py-2 flex items-center justify-between hover:bg-slate-50">
+                        <div class="min-w-0 pr-2">
+                            <div class="flex items-center gap-1.5">
+                                <span class="font-semibold text-slate-800">${t.category_name || '-'}</span>
+                                <span class="text-[10px] text-slate-400">• ${t.wallet_name || '-'}</span>
+                            </div>
+                            <div class="text-[10px] text-slate-400 truncate">${t.note || '-'} (${(t.transaction_date || '').slice(0, 10)})</div>
+                        </div>
+                        <span class="font-bold shrink-0 ${t.type === 'income' ? 'text-emerald-600' : 'text-rose-600'}">
+                            ${t.type === 'income' ? '+' : '-'}${formatIDR(t.amount)}
+                        </span>
+                    </div>
+                `).join('');
+            }
+
+            if (window.lucide) window.lucide.createIcons();
+        } catch (err) {
+            showToast(`Gagal memuat detail profil: ${err.message}`, "error");
+            closeModal("user-detail-modal");
         }
     }
 

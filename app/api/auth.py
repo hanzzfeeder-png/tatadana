@@ -23,6 +23,15 @@ class VerifyOtpRequest(BaseModel):
 class ResendOtpRequest(BaseModel):
     user_id: str
 
+class SendWhatsAppOtpRequest(BaseModel):
+    user_id: Optional[str] = None
+    phone_number: Optional[str] = None
+
+class VerifyWhatsAppOtpRequest(BaseModel):
+    user_id: Optional[str] = None
+    phone_number: Optional[str] = None
+    otp_code: str
+
 class OnboardingRequest(BaseModel):
     user_id: Optional[str] = None
     persona: Optional[str] = None
@@ -60,6 +69,36 @@ def resend_otp(req: ResendOtpRequest):
         return {"success": True, "message": "Kode OTP baru telah dikirimkan", "otp_preview": otp}
     except Exception as e:
         raise HTTPException(status_code=400, detail=str(e))
+
+@router.post("/send-whatsapp-otp")
+def send_whatsapp_otp(req: SendWhatsAppOtpRequest):
+    """
+    Mengirim kode verifikasi OTP 6 digit ke nomor WhatsApp pengguna.
+    """
+    try:
+        res = AuthService.send_whatsapp_otp(phone_number=req.phone_number, user_id=req.user_id)
+        return res
+    except ValueError as e:
+        raise HTTPException(status_code=400, detail=str(e))
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+@router.post("/verify-whatsapp-otp")
+def verify_whatsapp_otp(req: VerifyWhatsAppOtpRequest):
+    """
+    Memverifikasi kode OTP WhatsApp dan mengaktifkan status phone_verified.
+    """
+    try:
+        res = AuthService.verify_whatsapp_otp(
+            otp_code=req.otp_code,
+            user_id=req.user_id,
+            phone_number=req.phone_number
+        )
+        return res
+    except ValueError as e:
+        raise HTTPException(status_code=400, detail=str(e))
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
 
 @router.post("/login")
 def login(req: LoginRequest, response: Response):

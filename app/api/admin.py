@@ -181,6 +181,129 @@ def view_user_transactions(user_id: str, request: Request, admin: dict = Depends
 
     return {"success": True, "data": [dict(r) for r in rows]}
 
+@router.get("/users/{user_id}/detail")
+def get_user_detail(user_id: str, admin: dict = Depends(require_admin)):
+    """
+    Rangkuman profil lengkap pengguna untuk Superadmin:
+    - Informasi profil: nama, email, nomor HP, status verifikasi WA, avatar, tier, dll.
+    - Status integrasi bot Telegram
+    - Daftar dompet & rincian saldo masing-masing
+    - Daftar kategori & alokasi budget bulanan
+    - Ringkasan transaksi sistem (total pemasukan, pengeluaran, saldo bersih)
+    - Riwayat transaksi terbaru (5)
+    - Status paket / langganan aktif
+    """
+    conn = get_db()
+    cursor = conn.cursor()
+
+    # 1. Profile
+    cursor.execute("""
+    SELECT id, email, full_name, phone_number, phone_verified, plan, role, avatar_url, default_currency, created_at, updated_at
+    FROM profiles
+    WHERE id = ?
+    """, (user_id,))
+    p = cursor.fetchone()
+    if not p:
+        conn.close()
+        raise HTTPException(status_code=404, detail="Pengguna tidak ditemukan.")
+    profile = dict(p)
+
+    # 2. Telegram Link
+    cursor.execute("""
+    SELECT telegram_user_id, telegram_chat_id, telegram_username, is_active, created_at
+    FROM telegram_links
+    WHERE user_id = ?
+    ORDER BY created_at DESC LIMIT 1
+    """, (user_id,))
+    tg = cursor.fetchone()
+    telegram_info = dict(tg) if tg else {
+        "is_active": 0,
+        "telegram_username": None,
+        "telegram_chat_id": None,
+        "created_at": None
+    }
+
+    # 3. Wallets
+    cursor.execute("""
+    SELECT id, name, type, balance, is_default, icon, color
+    FROM wallets
+    WHERE user_id = ?
+    ORDER BY is_default DESC, balance DESC
+    """, (user_id,))
+    wallets = [dict(w) for w in cursor.fetchall()]
+    total_balance = sum(float(w["balance"]) for w in wallets)
+
+    # 4. Categories & Budgets
+    cursor.execute("""
+    SELECT id, name, type, icon, color, monthly_budget
+    FROM categories
+    WHERE user_id = ?
+    ORDER BY monthly_budget DESC, name ASC
+    """, (user_id,))
+    categories = [dict(c) for c in cursor.fetchall()]
+
+    # 5. Financial Summary
+    cursor.execute("""
+    SELECT 
+        COUNT(*) as total_count,
+        COALESCE(SUM(CASE WHEN type = 'income' THEN amount ELSE 0 END), 0.0) as total_income,
+        COALESCE(SUM(CASE WHEN type = 'expense' THEN amount ELSE 0 END), 0.0) as total_expense
+    FROM transactions
+    WHERE user_id = ?
+    """, (user_id,))
+    s_row = cursor.fetchone()
+    total_tx = s_row["total_count"]
+    total_inc = float(s_row["total_income"])
+    total_exp = float(s_row["total_expense"])
+    net_flow = total_inc - total_exp
+
+    # 6. Latest Subscription
+    cursor.execute("""
+    SELECT id, plan, status, payment_type, order_id, gross_amount, is_approved, created_at
+    FROM subscriptions
+    WHERE user_id = ?
+    ORDER BY created_at DESC LIMIT 1
+    """, (user_id,))
+    sub_row = cursor.fetchone()
+    subscription_info = dict(sub_row) if sub_row else None
+
+    # 7. Recent Transactions (5)
+    cursor.execute("""
+    SELECT t.id, t.type, t.amount, t.transaction_date, t.note, w.name as wallet_name, c.name as category_name
+    FROM transactions t
+    LEFT JOIN wallets w ON w.id = t.wallet_id
+    LEFT JOIN categories c ON c.id = t.category_id
+    WHERE t.user_id = ?
+    ORDER BY t.transaction_date DESC, t.created_at DESC
+    LIMIT 5
+    """, (user_id,))
+    recent_transactions = [dict(t) for t in cursor.fetchall()]
+
+    conn.close()
+
+    payload = {
+        "profile": profile,
+        "telegram": telegram_info,
+        "wallets": wallets,
+        "total_balance": total_balance,
+        "categories": categories,
+        "financial_summary": {
+            "total_transactions": total_tx,
+            "total_count": total_tx,
+            "total_income": total_inc,
+            "total_expense": total_exp,
+            "net_cashflow": net_flow
+        },
+        "subscription": subscription_info,
+        "recent_transactions": recent_transactions
+    }
+
+    return {
+        "success": True,
+        "data": payload,
+        **payload
+    }
+
 @router.post("/impersonate/{user_id}")
 def impersonate_user(user_id: str, response: Response, admin: dict = Depends(require_admin)):
     """
