@@ -1,4 +1,6 @@
 import os
+import uuid
+import random
 import pytest
 from fastapi.testclient import TestClient
 from app.main import app
@@ -780,5 +782,132 @@ class TestAdvancedFeaturesV2:
         })
         assert post_hook_res.status_code == 200
         assert post_hook_res.json()["status"] == "success"
+
+    def test_billing_page_and_plan_synchronization(self):
+        """
+        Pengujian Fitur Paket & Billing:
+        1. Tombol 'Beli Paket Starter (Rp 49.000/bln)' aktif jika belum berlangganan atau ingin beralih.
+        2. Kartu Starter memiliki status disabled / 'Paket Saat Ini Aktif' hanya saat user aktif di paket starter.
+        3. Endpoint /api/payments/create-order tersinkronisasi untuk Starter (Rp 49.000) dan Pro (Rp 99.000).
+        4. Verifikasi approval admin untuk kedua paket memperbarui plan pengguna secara akurat.
+        """
+        u_suffix = uuid.uuid4().hex[:6]
+        free_user_id = str(uuid.uuid4())
+        starter_user_id = str(uuid.uuid4())
+        pro_user_id = str(uuid.uuid4())
+        admin_id = str(uuid.uuid4())
+
+        conn = get_db()
+        c = conn.cursor()
+        c.execute("""
+        INSERT INTO profiles (id, email, password_hash, full_name, role, plan, is_admin, phone_verified)
+        VALUES (?, ?, 'hash', 'Free User', 'user', 'free', 0, 1)
+        """, (free_user_id, f"free_{u_suffix}@tatadana.id"))
+
+        c.execute("""
+        INSERT INTO profiles (id, email, password_hash, full_name, role, plan, is_admin, phone_verified)
+        VALUES (?, ?, 'hash', 'Starter User', 'user', 'starter', 0, 1)
+        """, (starter_user_id, f"starter_{u_suffix}@tatadana.id"))
+
+        c.execute("""
+        INSERT INTO profiles (id, email, password_hash, full_name, role, plan, is_admin, phone_verified)
+        VALUES (?, ?, 'hash', 'Pro User', 'user', 'pro', 0, 1)
+        """, (pro_user_id, f"pro_{u_suffix}@tatadana.id"))
+
+        c.execute("""
+        INSERT INTO profiles (id, email, password_hash, full_name, role, plan, is_admin, phone_verified)
+        VALUES (?, ?, 'hash', 'Admin Billing', 'superadmin', 'pro', 1, 1)
+        """, (admin_id, f"admin_{u_suffix}@tatadana.id"))
+        conn.commit()
+        conn.close()
+
+        free_token = create_access_token({"sub": free_user_id, "email": f"free_{u_suffix}@tatadana.id", "role": "user", "plan": "free"})
+        starter_token = create_access_token({"sub": starter_user_id, "email": f"starter_{u_suffix}@tatadana.id", "role": "user", "plan": "starter"})
+        pro_token = create_access_token({"sub": pro_user_id, "email": f"pro_{u_suffix}@tatadana.id", "role": "user", "plan": "pro"})
+        admin_token = create_access_token({"sub": admin_id, "email": f"admin_{u_suffix}@tatadana.id", "role": "superadmin", "plan": "pro"})
+
+        # 1. UI Check: Free User Settings Page
+        res_free = client.get("/dashboard/settings?tab=plan", cookies={"tatadana_token": free_token})
+        assert res_free.status_code == 200
+        assert "Beli Paket Starter (Rp 49.000/bln)" in res_free.text
+        assert "handleUpgrade('starter')" in res_free.text
+        assert "Upgrade ke Pro Sekarang (Rp 99.000)" in res_free.text
+        assert "handleUpgrade('pro')" in res_free.text
+
+        # 2. UI Check: Starter User Settings Page
+        res_starter = client.get("/dashboard/settings?tab=plan", cookies={"tatadana_token": starter_token})
+        assert res_starter.status_code == 200
+        # Starter card has active status & disabled button
+        assert "Paket Saat Ini Aktif" in res_starter.text
+        assert "Upgrade ke Pro Sekarang (Rp 99.000)" in res_starter.text
+        assert "handleUpgrade('pro')" in res_starter.text
+
+        # 3. UI Check: Pro User Settings Page
+        res_pro = client.get("/dashboard/settings?tab=plan", cookies={"tatadana_token": pro_token})
+        assert res_pro.status_code == 200
+        assert "Paket Saat Ini Aktif (TataDana Pro)" in res_pro.text
+        assert "Beli Paket Starter (Rp 49.000/bln)" in res_pro.text
+        assert "handleUpgrade('starter')" in res_pro.text
+
+        # 4. Backend API Check: Create Order Starter (Rp 49.000)
+        starter_order_res = client.post(
+            "/api/payments/create-order",
+            json={"plan": "starter", "payment_type": "midtrans"},
+            headers={"Authorization": f"Bearer {free_token}"}
+        )
+        assert starter_order_res.status_code == 200
+        starter_data = starter_order_res.json()["data"]
+        assert starter_data["plan"] == "starter"
+        assert starter_data["amount"] == 49000.0
+        assert starter_data["order_id"].startswith("TD-STARTER-")
+        starter_sub_id = starter_data["subscription_id"]
+
+        # 5. Backend API Check: Create Order Pro (Rp 99.000)
+        pro_order_res = client.post(
+            "/api/payments/create-order",
+            json={"plan": "pro", "payment_type": "midtrans"},
+            headers={"Authorization": f"Bearer {starter_token}"}
+        )
+        assert pro_order_res.status_code == 200
+        pro_data = pro_order_res.json()["data"]
+        assert pro_data["plan"] == "pro"
+        assert pro_data["amount"] == 99000.0
+        assert pro_data["order_id"].startswith("TD-PRO-")
+        pro_sub_id = pro_data["subscription_id"]
+
+        # 6. Backend API Check: Invalid Plan rejection
+        invalid_res = client.post(
+            "/api/payments/create-order",
+            json={"plan": "enterprise", "payment_type": "midtrans"},
+            headers={"Authorization": f"Bearer {free_token}"}
+        )
+        assert invalid_res.status_code == 400
+        assert "tidak valid" in invalid_res.json()["detail"]
+
+        # 7. Admin Approval for Starter Order -> User upgraded from Free to Starter
+        approve_starter_res = client.post(
+            f"/api/admin/payments/{starter_sub_id}/action",
+            json={"action": "approve", "notes": "Starter approved"},
+            headers={"Authorization": f"Bearer {admin_token}"}
+        )
+        assert approve_starter_res.status_code == 200
+        assert approve_starter_res.json()["success"] is True
+
+        conn = get_db()
+        c = conn.cursor()
+        c.execute("SELECT plan FROM profiles WHERE id = ?", (free_user_id,))
+        assert c.fetchone()["plan"] == "starter"
+
+        # 8. Admin Approval for Pro Order -> User upgraded from Starter to Pro
+        approve_pro_res = client.post(
+            f"/api/admin/payments/{pro_sub_id}/action",
+            json={"action": "approve", "notes": "Pro upgrade approved"},
+            headers={"Authorization": f"Bearer {admin_token}"}
+        )
+        assert approve_pro_res.status_code == 200
+        c.execute("SELECT plan FROM profiles WHERE id = ?", (starter_user_id,))
+        assert c.fetchone()["plan"] == "pro"
+        conn.close()
+
 
 

@@ -499,7 +499,7 @@ def take_payment_action(subscription_id: str, req: PaymentActionRequest, admin: 
     act = req.action.lower().strip()
     if act == "approve":
         PaymentService.approve_payment(subscription_id, admin["id"], req.notes)
-        return {"success": True, "message": "Pembayaran berhasil di-approve! User di-upgrade ke Pro."}
+        return {"success": True, "message": "Pembayaran berhasil di-approve! Status langganan pengguna telah aktif."}
     elif act == "reject":
         PaymentService.reject_payment(subscription_id, admin["id"], req.notes)
         return {"success": True, "message": "Pembayaran berhasil ditolak."}
@@ -509,7 +509,7 @@ def take_payment_action(subscription_id: str, req: PaymentActionRequest, admin: 
 @router.post("/payments/{subscription_id}/approve")
 def approve_payment(subscription_id: str, req: ApproveRejectPaymentRequest, admin: dict = Depends(require_admin)):
     PaymentService.approve_payment(subscription_id, admin["id"], req.notes)
-    return {"success": True, "message": "Pembayaran berhasil di-approve! User di-upgrade ke Pro."}
+    return {"success": True, "message": "Pembayaran berhasil di-approve! Status langganan pengguna telah aktif."}
 
 @router.post("/payments/{subscription_id}/reject")
 def reject_payment(subscription_id: str, req: ApproveRejectPaymentRequest, admin: dict = Depends(require_admin)):

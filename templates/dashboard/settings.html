@@ -355,7 +355,14 @@ Ketik transaksimu sekarang!
                 <!-- Starter -->
                 <div class="p-5 rounded-2xl border {% if user.plan == 'starter' %}border-orange-500 bg-orange-50/20{% else %}border-slate-200 bg-white{% endif %} flex flex-col justify-between">
                     <div>
-                        <span class="text-xs font-bold text-slate-400 uppercase tracking-wider">Paket Dasar</span>
+                        <div class="flex items-center justify-between">
+                            <span class="text-xs font-bold text-slate-400 uppercase tracking-wider">Paket Dasar</span>
+                            {% if user.plan == 'starter' %}
+                            <span class="px-2 py-0.5 rounded-full text-[10px] font-bold bg-emerald-100 text-emerald-800 border border-emerald-200">
+                                Aktif
+                            </span>
+                            {% endif %}
+                        </div>
                         <h4 class="text-lg font-black text-slate-900 mt-1">Starter</h4>
                         <div class="text-2xl font-black text-slate-900 mt-2">Rp 49.000<span class="text-xs text-slate-400 font-normal"> / bulan</span></div>
                         <ul class="mt-4 space-y-2 text-xs text-slate-600">
@@ -368,6 +375,15 @@ Ketik transaksimu sekarang!
                             <li class="text-slate-400">✕ Tidak ada export PDF/Excel</li>
                         </ul>
                     </div>
+                    {% if user.plan == 'starter' %}
+                    <button disabled class="w-full py-2.5 rounded-xl text-xs font-bold mt-5 bg-emerald-100 text-emerald-800 border border-emerald-200 cursor-not-allowed">
+                        ✓ Paket Saat Ini Aktif
+                    </button>
+                    {% else %}
+                    <button onclick="handleUpgrade('starter')" class="btn-primary w-full py-2.5 rounded-xl text-xs font-bold mt-5">
+                        Beli Paket Starter (Rp 49.000/bln)
+                    </button>
+                    {% endif %}
                 </div>
 
                 <!-- Pro -->
@@ -376,7 +392,14 @@ Ketik transaksimu sekarang!
                         Paling Populer
                     </span>
                     <div>
-                        <span class="text-xs font-bold text-orange-600 uppercase tracking-wider">Akses Seumur Hidup</span>
+                        <div class="flex items-center justify-between">
+                            <span class="text-xs font-bold text-orange-600 uppercase tracking-wider">Akses Seumur Hidup</span>
+                            {% if user.plan == 'pro' %}
+                            <span class="px-2 py-0.5 rounded-full text-[10px] font-bold bg-emerald-100 text-emerald-800 border border-emerald-200">
+                                Aktif
+                            </span>
+                            {% endif %}
+                        </div>
                         <h4 class="text-lg font-black text-slate-900 mt-1">Pro</h4>
                         <div class="text-2xl font-black text-orange-600 mt-2">Rp 99.000<span class="text-xs text-slate-400 font-normal"> Sekali Bayar</span></div>
                         <ul class="mt-4 space-y-2 text-xs text-slate-700 font-medium">
@@ -389,14 +412,14 @@ Ketik transaksimu sekarang!
                             <li>✓ Prioritas support 24/7</li>
                         </ul>
                     </div>
-                    {% if user.plan != 'pro' %}
+                    {% if user.plan == 'pro' %}
+                    <button disabled class="w-full py-2.5 rounded-xl text-xs font-bold mt-5 bg-emerald-100 text-emerald-800 border border-emerald-200 cursor-not-allowed">
+                        ✓ Paket Saat Ini Aktif (TataDana Pro)
+                    </button>
+                    {% else %}
                     <button onclick="handleUpgrade('pro')" class="btn-primary w-full py-2.5 rounded-xl text-xs font-bold mt-5">
                         Upgrade ke Pro Sekarang (Rp 99.000)
                     </button>
-                    {% else %}
-                    <div class="mt-5 py-2 rounded-xl text-center text-xs font-bold bg-emerald-100 text-emerald-800">
-                        ✓ Anda sudah menikmati TataDana Pro
-                    </div>
                     {% endif %}
                 </div>
             </div>
@@ -776,14 +799,16 @@ Ketik transaksimu sekarang!
 
     async function handleUpgrade(plan) {
         try {
+            const planName = plan === 'starter' ? 'Starter' : 'Pro';
+            showToast(`Menyiapkan checkout paket ${planName}...`, "info");
             const res = await apiCall("/api/payments/create-order", {
                 method: "POST",
                 body: JSON.stringify({ plan, payment_type: "midtrans" })
             });
-            showToast("Order upgrade dibuat. Mengarahkan ke pembayaran Midtrans...", "info");
+            showToast(`Order paket ${planName} berhasil dibuat. Mengarahkan ke pembayaran...`, "success");
             setTimeout(() => {
-                alert(`[DEMO MIDTRANS PAYMENT]\nOrder ID: ${res.data.order_id}\nTotal: Rp ${res.data.amount.toLocaleString('id-ID')}\n\nPembayaran dapat langsung di-approve oleh Admin di Admin Panel.`);
-            }, 500);
+                alert(`[DEMO MIDTRANS PAYMENT]\nOrder ID: ${res.data.order_id}\nPaket: TataDana ${planName}\nTotal: Rp ${res.data.amount.toLocaleString('id-ID')}\n\nPembayaran dapat langsung di-approve oleh Admin di Admin Panel.`);
+            }, 400);
         } catch (err) {
             showToast(err.message, "error");
         }

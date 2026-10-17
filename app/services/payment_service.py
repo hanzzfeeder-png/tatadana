@@ -7,8 +7,9 @@ from app.config import settings, get_wib_str
 class PaymentService:
     @staticmethod
     def create_subscription_order(user_id: str, plan: str, payment_type: str = "midtrans") -> Dict[str, Any]:
+        plan = (plan or "").strip().lower()
         if plan not in ["starter", "pro"]:
-            raise ValueError("Paket langganan tidak valid.")
+            raise ValueError("Paket langganan tidak valid. Pilihan: 'starter' atau 'pro'.")
 
         amount = 49000.0 if plan == "starter" else 99000.0
         order_id = f"TD-{plan.upper()}-{uuid.uuid4().hex[:8].upper()}"
