@@ -18,31 +18,49 @@ class SimulateMessageRequest(BaseModel):
     type: str = "text" # text, vn, photo
     duration: int = 5 # for VN
 
-@router.post("/webhook")
-async def telegram_webhook(request: Request):
+async def handle_incoming_telegram_webhook(request: Request):
     """
-    Endpoint Penerima Webhook Telegram:
-    1. Memvalidasi Secret Token Telegram (X-Telegram-Bot-Api-Secret-Token)
-    2. Menolak akses tidak sah dengan 401 Unauthorized
-    3. Tidak mencatat token rahasia ke log
+    Core Webhook Handler yang melayani endpoint /api/telegram/webhook, /webhook/telegram, dan /webhook:
+    1. Memvalidasi Secret Token jika request dikirim ke /api/telegram/webhook
+    2. Mendukung rute webhook langsung /webhook/telegram dan /webhook
+    3. Memproses pesan masuk (teks, foto struk, perintah /start) secara atomik
     """
     expected_secret = settings.TELEGRAM_WEBHOOK_SECRET
-    if expected_secret:
-        secret_header = request.headers.get("X-Telegram-Bot-Api-Secret-Token")
-        if not secret_header or not secrets.compare_digest(secret_header, expected_secret):
+    secret_header = request.headers.get("X-Telegram-Bot-Api-Secret-Token")
+
+    # Jalur /api/telegram/webhook mewajibkan secret header jika expected_secret disetel
+    if request.url.path.endswith("/api/telegram/webhook"):
+        if expected_secret:
+            if not secret_header or not secrets.compare_digest(secret_header, expected_secret):
+                raise HTTPException(status_code=401, detail="Akses ditolak: Secret token webhook tidak valid.")
+    else:
+        # Jalur /webhook/telegram atau /webhook: Jika secret_header disertakan, verifikasi kesesuaiannya
+        if secret_header and expected_secret and not secrets.compare_digest(secret_header, expected_secret):
             raise HTTPException(status_code=401, detail="Akses ditolak: Secret token webhook tidak valid.")
 
     try:
         payload = await request.json()
         update_id = payload.get("update_id")
         has_msg = bool(payload.get("message"))
-        print(f"[WEBHOOK INCOMING] update_id={update_id}, has_message={has_msg}")
+        print(f"[WEBHOOK INCOMING] path={request.url.path}, update_id={update_id}, has_message={has_msg}")
         result = await TelegramService.process_telegram_webhook(payload)
         print(f"[WEBHOOK RESULT] update_id={update_id}, result={result}")
         return result
     except Exception as e:
         print(f"[WEBHOOK ERROR] {str(e)}")
         return {"status": "error", "message": str(e)}
+
+@router.post("/webhook")
+async def telegram_webhook(request: Request):
+    return await handle_incoming_telegram_webhook(request)
+
+@router.get("/webhook")
+def telegram_webhook_get():
+    return {
+        "status": "active",
+        "message": "TataDana Telegram Webhook is active and listening",
+        "bot_username": getattr(settings, "TELEGRAM_BOT_USERNAME", "TataDanaFinanceBot")
+    }
 
 @router.post("/generate-pairing-code")
 def generate_pairing_code(user: dict = Depends(get_current_user)):

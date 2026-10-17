@@ -763,4 +763,22 @@ class TestAdvancedFeaturesV2:
         assert st_data["is_user_linked"] is True
         assert st_data["user_link"]["telegram_username"] == f"user_dl_{u_suffix}"
 
+        # 6. Verify custom route /webhook/telegram (supports GET check and direct POST webhook)
+        get_hook_res = client.get("/webhook/telegram")
+        assert get_hook_res.status_code == 200
+        assert get_hook_res.json()["status"] == "active"
+
+        # Test POST directly to /webhook/telegram (without secret token, as set via Telegram setWebhook URL)
+        post_hook_res = client.post("/webhook/telegram", json={
+            "update_id": random.randint(1000000, 9999999),
+            "message": {
+                "message_id": 2,
+                "from": {"id": tg_user_id, "username": f"user_dl_{u_suffix}"},
+                "chat": {"id": tg_user_id, "type": "private"},
+                "text": "Beli kopi 25rb"
+            }
+        })
+        assert post_hook_res.status_code == 200
+        assert post_hook_res.json()["status"] == "success"
+
 

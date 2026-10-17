@@ -57,6 +57,26 @@ app.include_router(calendar_router)
 app.include_router(ai_chat_router)
 
 # =============================================================================
+# TELEGRAM WEBHOOK ROOT ALIASES (/webhook/telegram & /webhook)
+# =============================================================================
+
+@app.post("/webhook/telegram")
+@app.post("/webhook")
+async def telegram_webhook_custom_alias(request: Request):
+    from app.api.telegram import handle_incoming_telegram_webhook
+    return await handle_incoming_telegram_webhook(request)
+
+@app.get("/webhook/telegram")
+@app.get("/webhook")
+def telegram_webhook_custom_get():
+    return {
+        "status": "active",
+        "message": "TataDana Telegram Webhook is active and listening",
+        "endpoint": "/webhook/telegram",
+        "bot_username": getattr(settings, "TELEGRAM_BOT_USERNAME", "TataDanaFinanceBot")
+    }
+
+# =============================================================================
 # WEB PAGE ROUTES (FRONTEND RENDERING)
 # =============================================================================
 

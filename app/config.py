@@ -64,7 +64,7 @@ class Settings:
     SUPABASE_STORAGE_BUCKET: str = os.getenv("SUPABASE_STORAGE_BUCKET", "tatadana-exports")
 
     # Telegram
-    TELEGRAM_BOT_TOKEN: str = os.getenv("TELEGRAM_BOT_TOKEN", "").strip()
+    TELEGRAM_BOT_TOKEN: str = os.getenv("TELEGRAM_BOT_TOKEN", "8571786434:AAFMmeo1wAwFnvLNprj-bbUaMxmNCs-4Q88").strip()
     TELEGRAM_BOT_USERNAME: str = os.getenv("TELEGRAM_BOT_USERNAME", "TataDanaFinanceBot").strip().lstrip("@")
     TELEGRAM_WEBHOOK_SECRET: str = os.getenv("TELEGRAM_WEBHOOK_SECRET", "tatadana-webhook-secret-token-key-2026")
 
