@@ -78,7 +78,22 @@ def test_full_pipeline():
     default_wallet_id = wallets[0]["id"]
     print(f"  [OK] Dompet otomatis terbuat: {wallets[0]['name']} (Default: {wallets[0]['is_default']})")
 
-    # Create 2nd wallet
+    # Try creating 2nd wallet under Free plan -> MUST BE REJECTED (Free limit: 1 wallet)
+    w2_free_res = client.post("/api/wallets", headers=headers, json={
+        "name": "Bank BCA", "type": "bank", "initial_balance": 5000000.0, "icon": "[BCA]"
+    })
+    assert w2_free_res.status_code == 400
+    assert "Akun Free dibatasi maksimal 1 dompet" in w2_free_res.json()["detail"]
+    print("  [OK] Enforcing Free Limit terbukti: Dompet ke-2 ditolak untuk akun Free.")
+
+    # Upgrade user to Starter plan
+    conn = get_db()
+    c = conn.cursor()
+    c.execute("UPDATE profiles SET plan = 'starter' WHERE id = ?", (user_id,))
+    conn.commit()
+    conn.close()
+
+    # Create 2nd wallet (Allowed for Starter)
     w2_res = client.post("/api/wallets", headers=headers, json={
         "name": "Bank BCA", "type": "bank", "initial_balance": 5000000.0, "icon": "[BCA]"
     })

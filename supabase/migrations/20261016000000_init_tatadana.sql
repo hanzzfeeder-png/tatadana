@@ -22,7 +22,7 @@ CREATE TABLE IF NOT EXISTS public.profiles (
     phone_verified BOOLEAN DEFAULT FALSE,
     otp_code TEXT,
     otp_expires_at TIMESTAMPTZ,
-    plan TEXT NOT NULL DEFAULT 'starter' CHECK (plan IN ('starter', 'pro')),
+    plan TEXT NOT NULL DEFAULT 'free' CHECK (plan IN ('free', 'starter', 'pro')),
     role TEXT NOT NULL DEFAULT 'user' CHECK (role IN ('user', 'superadmin')),
     avatar_url TEXT,
     default_currency TEXT NOT NULL DEFAULT 'IDR',

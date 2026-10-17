@@ -85,8 +85,8 @@
                 <div class="flex-1 min-w-0">
                     <div class="font-semibold text-sm text-slate-900 truncate">{{ user.full_name if user else 'Pengguna' }}</div>
                     <div class="flex items-center gap-1.5 mt-0.5">
-                        <span class="inline-flex items-center px-1.5 py-0.5 rounded text-[10px] font-bold uppercase tracking-wider {% if user and user.plan == 'pro' %}bg-gradient-to-r from-amber-500 to-orange-500 text-white{% else %}bg-slate-200 text-slate-700{% endif %}">
-                            {{ user.plan.upper() if user else 'STARTER' }}
+                        <span class="inline-flex items-center px-1.5 py-0.5 rounded text-[10px] font-bold uppercase tracking-wider {% if user and user.plan == 'pro' %}bg-gradient-to-r from-amber-500 to-orange-500 text-white{% elif user and user.plan == 'starter' %}bg-emerald-100 text-emerald-800 border border-emerald-200{% else %}bg-slate-200 text-slate-700{% endif %}">
+                            {{ user.plan.upper() if user and user.plan else 'FREE' }}
                         </span>
                         {% if user and user.plan != 'pro' %}
                         <a href="/dashboard/settings?tab=plan" class="text-[11px] font-semibold text-orange-600 hover:underline">Upgrade</a>

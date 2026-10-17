@@ -29,7 +29,7 @@ def init_db():
         phone_verified INTEGER DEFAULT 0,
         otp_code TEXT,
         otp_expires_at TEXT,
-        plan TEXT NOT NULL DEFAULT 'starter',
+        plan TEXT NOT NULL DEFAULT 'free',
         role TEXT NOT NULL DEFAULT 'user',
         is_admin INTEGER DEFAULT 0,
         avatar_url TEXT,

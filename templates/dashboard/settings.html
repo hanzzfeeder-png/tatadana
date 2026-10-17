@@ -345,10 +345,20 @@ Ketik transaksimu sekarang!
                     <h3 class="font-bold text-base text-slate-900">Paket Langganan Anda</h3>
                     <p class="text-xs text-slate-500 mt-0.5">Upgrade untuk membuka seluruh fitur premium tanpa batas.</p>
                 </div>
-                <span class="px-3 py-1 rounded-full text-xs font-bold {% if user.plan == 'pro' %}bg-gradient-to-r from-amber-500 to-orange-500 text-white{% else %}bg-slate-200 text-slate-700{% endif %} uppercase tracking-wider">
-                    Paket {{ user.plan.upper() }}
+                <span class="px-3 py-1 rounded-full text-xs font-bold {% if user.plan == 'pro' %}bg-gradient-to-r from-amber-500 to-orange-500 text-white{% elif user.plan == 'starter' %}bg-emerald-100 text-emerald-800 border border-emerald-200{% else %}bg-slate-100 text-slate-600 border border-slate-200{% endif %} uppercase tracking-wider">
+                    Paket {{ user.plan.upper() if user.plan in ['starter', 'pro'] else 'FREE (BELUM BERLANGGANAN)' }}
                 </span>
             </div>
+
+            {% if user.plan not in ['starter', 'pro'] %}
+            <div class="mt-4 p-4 rounded-xl bg-amber-50 border border-amber-200 text-amber-900 flex items-start gap-3">
+                <i data-lucide="info" class="w-5 h-5 text-amber-600 shrink-0 mt-0.5"></i>
+                <div class="text-xs">
+                    <p class="font-bold">Status Akun Anda Saat Ini: Free (Uji Coba)</p>
+                    <p class="mt-0.5 text-amber-800">Akun Free dibatasi maksimal 10 transaksi/bulan, 1 dompet, dan 2 budget kategori. Silakan pilih paket Starter atau Pro di bawah untuk membuka kuota pencatatan lebih luas!</p>
+                </div>
+            </div>
+            {% endif %}
 
             <!-- Plan Comparison Cards -->
             <div class="grid grid-cols-1 md:grid-cols-2 gap-5 mt-6">

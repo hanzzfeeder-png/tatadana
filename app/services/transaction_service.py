@@ -77,10 +77,10 @@ class TransactionService:
         conn = get_db()
         cursor = conn.cursor()
         try:
-            # 1. Enforce Plan Limits: Starter max 50 transactions / month
+            # 1. Enforce Plan Limits: Free max 10/month, Starter max 50/month
             cursor.execute("SELECT plan FROM profiles WHERE id = ?", (user_id,))
             p = cursor.fetchone()
-            plan = p["plan"] if p else "starter"
+            plan = p["plan"] if p else "free"
 
             now_wib = get_wib_now()
             month_str = now_wib.strftime("%Y-%m")
@@ -91,7 +91,9 @@ class TransactionService:
             """, (user_id, f"{month_str}%"))
             monthly_count = cursor.fetchone()[0]
 
-            if plan == "starter" and monthly_count >= 50:
+            if plan in ["free", "none", "inactive"] and monthly_count >= 10:
+                raise ValueError("Batas transaksi akun Free tercapai (10/10 transaksi per bulan). Silakan beli Paket Starter atau Pro di menu Pengaturan/Billing untuk melanjutkan pencatatan!")
+            elif plan == "starter" and monthly_count >= 50:
                 raise ValueError("Batas transaksi bulanan tercapai (50/50 transaksi). Upgrade ke TataDana Pro untuk pencatatan tanpa batas!")
 
             # 2. Verify Wallet Ownership (Dompet Asal)

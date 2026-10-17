@@ -30,9 +30,15 @@ class BudgetService:
         if monthly_budget > 0:
             cursor.execute("SELECT plan FROM profiles WHERE id = ?", (user_id,))
             p = cursor.fetchone()
-            plan = p["plan"] if p else "starter"
-            if plan == "starter":
-                cursor.execute("SELECT COUNT(*) FROM categories WHERE user_id = ? AND monthly_budget > 0", (user_id,))
+            plan = p["plan"] if p else "free"
+            if plan in ["free", "none", "inactive"]:
+                cursor.execute("SELECT COUNT(*) FROM categories WHERE user_id = ? AND monthly_budget > 0 AND is_system = 0", (user_id,))
+                budget_count = cursor.fetchone()[0]
+                if budget_count >= 2:
+                    conn.close()
+                    raise ValueError("Akun Free dibatasi maksimal 2 budget kategori kustom. Beli Paket Starter (maks 5) atau Pro (unlimited) di menu Pengaturan/Billing!")
+            elif plan == "starter":
+                cursor.execute("SELECT COUNT(*) FROM categories WHERE user_id = ? AND monthly_budget > 0 AND is_system = 0", (user_id,))
                 budget_count = cursor.fetchone()[0]
                 if budget_count >= 5:
                     conn.close()
@@ -65,9 +71,15 @@ class BudgetService:
         if monthly_budget is not None and monthly_budget > 0:
             cursor.execute("SELECT plan FROM profiles WHERE id = ?", (user_id,))
             p = cursor.fetchone()
-            plan = p["plan"] if p else "starter"
-            if plan == "starter":
-                cursor.execute("SELECT COUNT(*) FROM categories WHERE user_id = ? AND monthly_budget > 0 AND id != ?", (user_id, category_id))
+            plan = p["plan"] if p else "free"
+            if plan in ["free", "none", "inactive"]:
+                cursor.execute("SELECT COUNT(*) FROM categories WHERE user_id = ? AND monthly_budget > 0 AND is_system = 0 AND id != ?", (user_id, category_id))
+                budget_count = cursor.fetchone()[0]
+                if budget_count >= 2:
+                    conn.close()
+                    raise ValueError("Akun Free dibatasi maksimal 2 budget kategori kustom. Silakan upgrade ke Paket Starter atau Pro!")
+            elif plan == "starter":
+                cursor.execute("SELECT COUNT(*) FROM categories WHERE user_id = ? AND monthly_budget > 0 AND is_system = 0 AND id != ?", (user_id, category_id))
                 budget_count = cursor.fetchone()[0]
                 if budget_count >= 5:
                     conn.close()

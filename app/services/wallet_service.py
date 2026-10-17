@@ -46,15 +46,18 @@ class WalletService:
         conn = get_db()
         cursor = conn.cursor()
 
-        # Check Plan limit: Starter max 3 wallets
+        # Check Plan limit: Free max 1 wallet, Starter max 3 wallets
         cursor.execute("SELECT plan FROM profiles WHERE id = ?", (user_id,))
         p = cursor.fetchone()
-        plan = p["plan"] if p else "starter"
+        plan = p["plan"] if p else "free"
 
         cursor.execute("SELECT COUNT(*) FROM wallets WHERE user_id = ?", (user_id,))
         current_count = cursor.fetchone()[0]
 
-        if plan == "starter" and current_count >= 3:
+        if plan in ["free", "none", "inactive"] and current_count >= 1:
+            conn.close()
+            raise ValueError("Akun Free dibatasi maksimal 1 dompet. Beli Paket Starter (maks 3 dompet) atau Pro (unlimited) di menu Pengaturan/Billing!")
+        elif plan == "starter" and current_count >= 3:
             conn.close()
             raise ValueError("Paket Starter dibatasi maksimal 3 dompet. Upgrade ke paket Pro untuk membuat dompet tanpa batas!")
 

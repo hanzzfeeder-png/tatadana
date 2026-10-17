@@ -80,7 +80,7 @@ class TestStage8E2EVerification(unittest.TestCase):
         cursor.execute("SELECT phone_verified, plan FROM profiles WHERE id = ?", (user_id,))
         p = cursor.fetchone()
         self.assertEqual(p["phone_verified"], 1)
-        self.assertEqual(p["plan"], "starter")
+        self.assertEqual(p["plan"], "free")
 
         # Default wallet 'Dompet Tunai' exists and is_default = 1
         cursor.execute("SELECT name, is_default, balance FROM wallets WHERE user_id = ?", (user_id,))

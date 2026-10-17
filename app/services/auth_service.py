@@ -45,7 +45,7 @@ class AuthService:
         # Insert Profile
         cursor.execute("""
         INSERT INTO profiles (id, email, password_hash, full_name, phone_number, phone_verified, otp_code, otp_expires_at, plan, role, default_currency, created_at, updated_at)
-        VALUES (?, ?, ?, ?, ?, 0, ?, ?, 'starter', 'user', 'IDR', ?, ?)
+        VALUES (?, ?, ?, ?, ?, 0, ?, ?, 'free', 'user', 'IDR', ?, ?)
         """, (user_id, email.lower().strip(), pwd_hash, full_name.strip(), clean_phone, otp, otp_expires, now, now))
 
         # Auto-provision Default Wallet (Dompet Tunai)
@@ -81,7 +81,7 @@ class AuthService:
         conn.commit()
         conn.close()
 
-        token = create_access_token({"sub": user_id, "email": email, "role": "user", "plan": "starter"})
+        token = create_access_token({"sub": user_id, "email": email, "role": "user", "plan": "free"})
         return {
             "user_id": user_id,
             "email": email,
@@ -436,7 +436,7 @@ class AuthService:
 
         cursor.execute("""
         INSERT INTO profiles (id, email, password_hash, full_name, phone_number, phone_verified, plan, role, is_admin, avatar_url, default_currency, created_at, updated_at)
-        VALUES (?, ?, ?, ?, NULL, 0, 'starter', 'user', 0, ?, 'IDR', ?, ?)
+        VALUES (?, ?, ?, ?, NULL, 0, 'free', 'user', 0, ?, 'IDR', ?, ?)
         """, (user_id, clean_email, dummy_pwd_hash, display_name, avatar_url, now, now))
 
         # Auto-provision Default Wallet (Dompet Tunai)
@@ -476,7 +476,7 @@ class AuthService:
             "sub": user_id,
             "email": clean_email,
             "role": "user",
-            "plan": "starter"
+            "plan": "free"
         })
 
         return {
@@ -488,7 +488,7 @@ class AuthService:
                 "full_name": display_name,
                 "phone_number": None,
                 "phone_verified": False,
-                "plan": "starter",
+                "plan": "free",
                 "role": "user",
                 "avatar_url": avatar_url,
                 "default_currency": "IDR"

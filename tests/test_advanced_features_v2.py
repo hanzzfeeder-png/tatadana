@@ -301,7 +301,8 @@ class TestAdvancedFeaturesV2:
         cursor.execute("SELECT id FROM wallets WHERE user_id = ? LIMIT 1", (user_id,))
         w_id = cursor.fetchone()[0]
 
-        # Update wallet balance to 3.500.000
+        # Update profile to pro plan and wallet balance to 3.500.000
+        cursor.execute("UPDATE profiles SET plan = 'pro' WHERE id = ?", (user_id,))
         cursor.execute("UPDATE wallets SET balance = 3500000, name = 'BCA Utama' WHERE id = ?", (w_id,))
 
         # Set budget on a category
@@ -908,6 +909,89 @@ class TestAdvancedFeaturesV2:
         c.execute("SELECT plan FROM profiles WHERE id = ?", (starter_user_id,))
         assert c.fetchone()["plan"] == "pro"
         conn.close()
+
+
+def test_free_plan_quota_limits():
+    """Memastikan pengguna berstatus Free mendapatkan batasan fitur dan kuota yang tepat"""
+    from app.services.auth_service import AuthService
+    from app.services.transaction_service import TransactionService
+    from app.services.wallet_service import WalletService
+    from app.services.budget_service import BudgetService
+    from app.services.ai_service import AIService
+    import asyncio
+
+    u_suffix = uuid.uuid4().hex[:6]
+    email = f"free_tier_{u_suffix}@tatadana.id"
+    phone = f"0899{uuid.uuid4().int % 100000000:08d}"
+
+    # 1. Pendaftaran baru menghasilkan default plan 'free'
+    reg_res = AuthService.register_user(email, "Password123!", "Free Tester", phone)
+    user_id = reg_res["user_id"]
+
+    conn = get_db()
+    c = conn.cursor()
+    c.execute("SELECT plan FROM profiles WHERE id = ?", (user_id,))
+    p = c.fetchone()
+    assert p["plan"] == "free"
+
+    # Ambil dompet default
+    c.execute("SELECT id FROM wallets WHERE user_id = ?", (user_id,))
+    default_wallet_id = c.fetchone()["id"]
+    conn.close()
+
+    # 2. Limitasi Dompet: Akun Free dibatasi maksimal 1 dompet
+    try:
+        WalletService.create_wallet(user_id, "Dompet Tambahan Free", "bank")
+        assert False, "Harusnya error karena akun Free maksimal 1 dompet"
+    except ValueError as e:
+        assert "Akun Free dibatasi maksimal 1 dompet" in str(e)
+
+    # 3. Limitasi Budget: Akun Free dibatasi maksimal 2 budget kategori
+    # Set 2 budget pertama
+    BudgetService.create_category(user_id, "Kategori 1", "expense", monthly_budget=100000.0)
+    BudgetService.create_category(user_id, "Kategori 2", "expense", monthly_budget=200000.0)
+    # Budget ke-3 harus ditolak
+    try:
+        BudgetService.create_category(user_id, "Kategori 3", "expense", monthly_budget=300000.0)
+        assert False, "Harusnya error karena akun Free maksimal 2 budget kategori"
+    except ValueError as e:
+        assert "Akun Free dibatasi maksimal 2 budget kategori" in str(e)
+
+    # 4. Limitasi Transaksi: Akun Free dibatasi maksimal 10 transaksi per bulan
+    for i in range(10):
+        TransactionService.create_transaction(
+            user_id=user_id,
+            wallet_id=default_wallet_id,
+            tx_type="expense",
+            amount=10000.0 + i,
+            note=f"Belanja Free {i+1}"
+        )
+
+    # Transaksi ke-11 harus ditolak
+    try:
+        TransactionService.create_transaction(
+            user_id=user_id,
+            wallet_id=default_wallet_id,
+            tx_type="expense",
+            amount=15000.0,
+            note="Belanja Free 11"
+        )
+        assert False, "Harusnya error karena kuota transaksi Free maksimal 10/bulan"
+    except ValueError as e:
+        assert "Batas transaksi akun Free tercapai (10/10 transaksi per bulan)" in str(e)
+
+    # 5. Limitasi AI Chatbot: Akun Free dibatasi 3 pertanyaan per hari
+    async def run_chat():
+        for i in range(3):
+            res = await AIService.chat_with_assistant(user_id, f"Pertanyaan {i+1}")
+            assert res.get("limit_reached") is not True
+        # Pertanyaan ke-4 harus mengembalikan limit_reached
+        res_limit = await AIService.chat_with_assistant(user_id, "Pertanyaan ke-4")
+        assert res_limit.get("limit_reached") is True
+        assert "Batas Pratinjau Chatbot Akun Free Tercapai" in res_limit["reply"]
+
+    asyncio.run(run_chat())
+
 
 
 

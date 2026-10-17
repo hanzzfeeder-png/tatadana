@@ -83,6 +83,10 @@ class TestStage7AuthAndOnboarding(unittest.TestCase):
         cursor.execute("SELECT COUNT(*) FROM categories WHERE user_id = ?", (user_id,))
         cat_count = cursor.fetchone()[0]
         self.assertGreaterEqual(cat_count, 5)
+
+        # Verifikasi default plan adalah 'free'
+        cursor.execute("SELECT plan FROM profiles WHERE id = ?", (user_id,))
+        self.assertEqual(cursor.fetchone()["plan"], "free")
         conn.close()
 
     def test_04_phone_otp_verification_flow(self):
@@ -314,7 +318,7 @@ class TestStage7AuthAndOnboarding(unittest.TestCase):
         self.assertIsNotNone(p)
         self.assertEqual(p["full_name"], google_name)
         self.assertEqual(p["avatar_url"], google_avatar)
-        self.assertEqual(p["plan"], "starter")
+        self.assertEqual(p["plan"], "free")
 
         # Verifikasi dompet default
         cursor.execute("SELECT name, balance FROM wallets WHERE user_id = ?", (p["id"],))

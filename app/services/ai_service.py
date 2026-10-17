@@ -5,7 +5,7 @@ import uuid
 from typing import Dict, Any, List, Optional, Tuple
 import httpx
 from app.database import get_db
-from app.config import settings, get_wib_str
+from app.config import settings, get_wib_str, get_wib_now
 
 class AIService:
     @staticmethod
@@ -563,6 +563,35 @@ class AIService:
         """
         start_time = time.time()
         ctx = AIService.get_financial_context(user_id)
+
+        # Check Free Plan daily limit (max 3 messages / day)
+        if ctx.get("plan") in ["free", "none", "inactive"]:
+            conn_chk = get_db()
+            c_chk = conn_chk.cursor()
+            today_str = get_wib_now().strftime("%Y-%m-%d")
+            c_chk.execute("""
+            SELECT COUNT(*) FROM ai_chat_messages
+            WHERE user_id = ? AND role = 'user' AND created_at LIKE ?
+            """, (user_id, f"{today_str}%"))
+            user_msg_count = c_chk.fetchone()[0]
+            conn_chk.close()
+
+            if user_msg_count >= 3:
+                reply_limit = (
+                    f"🔒 **Batas Pratinjau Chatbot Akun Free Tercapai (3/3 pesan hari ini)**\n\n"
+                    f"Halo {ctx.get('first_name')}, Anda telah menggunakan kuota 3 pertanyaan harian akun Free. "
+                    f"Untuk konsultasi keuangan tanpa batas dan analisa mendalam dengan Tata AI, "
+                    f"silakan beli **Paket Starter** atau **Pro** di menu **Pengaturan > Paket & Billing**!"
+                )
+                return {
+                    "success": True,
+                    "reply": reply_limit,
+                    "provider": "TataDana Plan Enforcer",
+                    "model": "rule-based",
+                    "latency_ms": 10,
+                    "limit_reached": True
+                }
+
         reply = ""
         provider_name = "TataDana Financial Core"
         model_name = "tata-assistant-v1"
