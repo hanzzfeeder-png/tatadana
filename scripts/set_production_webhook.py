@@ -19,6 +19,12 @@ import argparse
 import httpx
 from dotenv import load_dotenv
 
+# Set UTF-8 encoding for Windows console compatibility
+if hasattr(sys.stdout, 'reconfigure'):
+    sys.stdout.reconfigure(encoding='utf-8', errors='replace')
+if hasattr(sys.stderr, 'reconfigure'):
+    sys.stderr.reconfigure(encoding='utf-8', errors='replace')
+
 # Load .env file
 load_dotenv()
 
