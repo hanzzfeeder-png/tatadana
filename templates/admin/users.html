@@ -1,0 +1,211 @@
+{% extends "admin/layout.html" %}
+
+{% block admin_title %}Kelola Pengguna & Impersonasi{% endblock %}
+{% block admin_subtitle %}Daftar seluruh akun terdaftar, status bot Telegram, dan tools troubleshooting{% endblock %}
+
+{% block admin_content %}
+<div class="space-y-6">
+    <!-- Search & Filter Card -->
+    <div class="p-5 rounded-2xl bg-white border border-slate-200 shadow-sm flex flex-col md:flex-row md:items-center justify-between gap-4">
+        <div class="relative flex-1 max-w-md">
+            <span class="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none text-slate-400">
+                <i data-lucide="search" class="w-4 h-4"></i>
+            </span>
+            <input type="text" id="user-search-input" oninput="handleSearch(this.value)" placeholder="Cari nama pengguna, email, atau nomor HP..." class="w-full pl-10 pr-4 py-2.5 rounded-xl border border-slate-200 bg-slate-50/50 text-xs focus:bg-white focus:outline-none focus:border-orange-500 focus:ring-1 focus:ring-orange-500 transition-all">
+        </div>
+        <div class="flex items-center gap-3">
+            <span id="users-count-badge" class="text-xs px-3 py-1.5 rounded-xl bg-orange-50 text-orange-700 border border-orange-200/60 font-bold">
+                0 User Terdaftar
+            </span>
+            <button onclick="loadUsers()" class="p-2.5 rounded-xl text-slate-500 hover:bg-slate-100 text-xs flex items-center gap-1.5 transition-colors" title="Muat ulang">
+                <i data-lucide="refresh-cw" class="w-3.5 h-3.5"></i>
+                <span>Refresh</span>
+            </button>
+        </div>
+    </div>
+
+    <!-- Users Table Card -->
+    <div class="rounded-2xl bg-white border border-slate-200 shadow-sm overflow-hidden">
+        <div class="p-5 border-b border-slate-100 flex items-center justify-between bg-slate-50/50">
+            <div>
+                <h4 class="font-bold text-sm text-slate-900">Database Pengguna TataDana</h4>
+                <p class="text-xs text-slate-500">Klik "Masuk Akun" untuk impersonasi atau "Cek Transaksi" untuk troubleshooting</p>
+            </div>
+        </div>
+
+        <div class="overflow-x-auto">
+            <table class="w-full text-left text-xs">
+                <thead>
+                    <tr class="border-b border-slate-100 text-slate-400 uppercase font-semibold bg-white">
+                        <th class="py-3 px-4">Pengguna</th>
+                        <th class="py-3 px-4">Kontak (HP)</th>
+                        <th class="py-3 px-4">Bot Telegram</th>
+                        <th class="py-3 px-4">Paket Plan</th>
+                        <th class="py-3 px-4">Total Tx</th>
+                        <th class="py-3 px-4">Terdaftar</th>
+                        <th class="py-3 px-4 text-right">Aksi Superadmin</th>
+                    </tr>
+                </thead>
+                <tbody id="users-table-body" class="divide-y divide-slate-100 font-medium text-slate-700">
+                    <tr><td colspan="7" class="py-8 text-center text-slate-400">Memuat data pengguna...</td></tr>
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+
+<!-- Modal: Tinjau Transaksi Pengguna (Troubleshooting Support) -->
+<div id="user-tx-modal" class="fixed inset-0 bg-slate-900/40 backdrop-blur-sm z-50 hidden items-center justify-center p-4">
+    <div class="bg-white border border-slate-200 rounded-2xl max-w-2xl w-full p-6 shadow-2xl relative text-slate-800 max-h-[85vh] flex flex-col">
+        <button onclick="closeModal('user-tx-modal')" class="absolute top-5 right-5 text-slate-400 hover:text-slate-600 text-xl font-bold">&times;</button>
+        
+        <div>
+            <div class="flex items-center gap-2">
+                <span class="px-2.5 py-0.5 rounded-full text-[10px] font-bold bg-amber-50 text-amber-800 border border-amber-200">
+                    🔒 AUDIT PRIVASI DIAWASI
+                </span>
+                <h3 class="text-base font-bold text-slate-900" id="modal-tx-title">Riwayat Transaksi Pengguna</h3>
+            </div>
+            <p class="text-xs text-slate-500 mt-1">
+                Akses ke data keuangan ini dicatat secara otomatis ke dalam <b>Admin Audit Log</b> untuk menjamin integritas privasi.
+            </p>
+        </div>
+
+        <div class="overflow-y-auto my-4 flex-1 border border-slate-100 rounded-xl">
+            <table class="w-full text-left text-xs">
+                <thead class="bg-slate-50 sticky top-0 text-slate-500 border-b border-slate-100">
+                    <tr>
+                        <th class="py-2.5 px-3">Tanggal (WIB)</th>
+                        <th class="py-2.5 px-3">Kategori</th>
+                        <th class="py-2.5 px-3">Dompet</th>
+                        <th class="py-2.5 px-3">Catatan</th>
+                        <th class="py-2.5 px-3 text-right">Nominal</th>
+                    </tr>
+                </thead>
+                <tbody id="modal-tx-tbody" class="divide-y divide-slate-100">
+                    <tr><td colspan="5" class="py-6 text-center text-slate-400">Memuat transaksi...</td></tr>
+                </tbody>
+            </table>
+        </div>
+
+        <div class="pt-2 flex justify-end">
+            <button onclick="closeModal('user-tx-modal')" class="px-4 py-2 rounded-xl text-xs font-semibold bg-slate-100 text-slate-700 hover:bg-slate-200">
+                Tutup
+            </button>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+{{ super() }}
+<script>
+    let searchTimeout = null;
+
+    function handleSearch(query) {
+        clearTimeout(searchTimeout);
+        searchTimeout = setTimeout(() => {
+            loadUsers(query);
+        }, 300);
+    }
+
+    async function loadUsers(query = "") {
+        const tbody = document.getElementById("users-table-body");
+        try {
+            const url = query ? `/api/admin/users?q=${encodeURIComponent(query)}` : "/api/admin/users";
+            const res = await apiCall(url);
+            const list = res.data || [];
+
+            document.getElementById("users-count-badge").innerText = `${list.length} User Ditemukan`;
+
+            if (list.length === 0) {
+                tbody.innerHTML = `<tr><td colspan="7" class="py-8 text-center text-slate-400">Tidak ada pengguna yang cocok dengan pencarian.</td></tr>`;
+                return;
+            }
+
+            tbody.innerHTML = list.map(u => `
+                <tr class="hover:bg-slate-50/70 transition-colors">
+                    <td class="py-3 px-4">
+                        <div class="font-bold text-slate-900">${u.full_name}</div>
+                        <div class="text-[11px] text-slate-400">${u.email}</div>
+                    </td>
+                    <td class="py-3 px-4 font-mono text-slate-600">
+                        ${u.phone_number || '<span class="text-slate-300">-</span>'}
+                    </td>
+                    <td class="py-3 px-4">
+                        <span class="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[10px] font-bold ${u.is_tg_connected ? 'bg-emerald-50 text-emerald-700 border border-emerald-200' : 'bg-slate-100 text-slate-500'}">
+                            ${u.is_tg_connected ? `🟢 @${u.telegram_username || 'Tersambung'}` : 'Belum Terhubung'}
+                        </span>
+                    </td>
+                    <td class="py-3 px-4">
+                        <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-[10px] font-bold uppercase tracking-wider ${u.plan === 'pro' ? 'bg-amber-100 text-amber-800 border border-amber-300' : 'bg-slate-100 text-slate-600'}">
+                            ${u.plan}
+                        </span>
+                    </td>
+                    <td class="py-3 px-4 font-semibold text-slate-800">${u.total_txs} tx</td>
+                    <td class="py-3 px-4 text-slate-400 text-[11px]">${(u.created_at || '').slice(0, 10)}</td>
+                    <td class="py-3 px-4 text-right space-x-1.5 whitespace-nowrap">
+                        <button onclick="viewUserTransactions('${u.id}', '${u.full_name}')" class="px-2.5 py-1.5 rounded-xl text-xs font-semibold bg-slate-100 hover:bg-slate-200 text-slate-700 transition-colors" title="Lihat transaksi pengguna untuk troubleshooting">
+                            Cek Transaksi
+                        </button>
+                        <button onclick="handleImpersonate('${u.id}', '${u.full_name}')" class="px-2.5 py-1.5 rounded-xl text-xs font-bold bg-orange-500 hover:bg-orange-600 text-white shadow-sm shadow-orange-500/20 transition-all" title="Masuk ke dashboard akun ini">
+                            Masuk Akun
+                        </button>
+                    </td>
+                </tr>
+            `).join('');
+
+            if (window.lucide) window.lucide.createIcons();
+        } catch (e) {
+            tbody.innerHTML = `<tr><td colspan="7" class="py-8 text-center text-rose-500">Gagal memuat pengguna: ${e.message}</td></tr>`;
+        }
+    }
+
+    async function handleImpersonate(userId, userName) {
+        if (!confirm(`Masuk ke tampilan akun "${userName}" tanpa password? Tindakan ini akan dicatat ke dalam audit log.`)) return;
+        try {
+            const res = await apiCall(`/api/admin/impersonate/${userId}`, { method: "POST" });
+            showToast(`Beralih ke akun ${userName}...`, "info");
+            setTimeout(() => {
+                window.location.href = res.redirect_url || "/dashboard";
+            }, 600);
+        } catch (err) {
+            showToast(err.message, "error");
+        }
+    }
+
+    async function viewUserTransactions(userId, userName) {
+        document.getElementById("modal-tx-title").innerText = `Transaksi: ${userName}`;
+        openModal("user-tx-modal");
+        const tbody = document.getElementById("modal-tx-tbody");
+        tbody.innerHTML = `<tr><td colspan="5" class="py-6 text-center text-slate-400">Memuat riwayat transaksi...</td></tr>`;
+
+        try {
+            const res = await apiCall(`/api/admin/users/${userId}/transactions`);
+            const list = res.data || [];
+            if (list.length === 0) {
+                tbody.innerHTML = `<tr><td colspan="5" class="py-6 text-center text-slate-400">Pengguna belum memiliki transaksi.</td></tr>`;
+                return;
+            }
+
+            tbody.innerHTML = list.map(t => `
+                <tr class="hover:bg-slate-50/70">
+                    <td class="py-2.5 px-3 text-slate-500 text-[11px]">${(t.transaction_date || '').slice(0, 16)}</td>
+                    <td class="py-2.5 px-3 font-semibold text-slate-800">${t.category_name || '-'}</td>
+                    <td class="py-2.5 px-3 text-slate-600">${t.wallet_name || '-'}</td>
+                    <td class="py-2.5 px-3 text-slate-500 max-w-xs truncate">${t.note || '-'}</td>
+                    <td class="py-2.5 px-3 text-right font-bold ${t.type === 'income' ? 'text-emerald-600' : (t.type === 'expense' ? 'text-rose-600' : 'text-blue-600')}">
+                        ${t.type === 'income' ? '+' : (t.type === 'expense' ? '-' : '⇄ ')}${formatIDR(t.amount)}
+                    </td>
+                </tr>
+            `).join('');
+        } catch (err) {
+            tbody.innerHTML = `<tr><td colspan="5" class="py-6 text-center text-rose-500">Error: ${err.message}</td></tr>`;
+        }
+    }
+
+    document.addEventListener("DOMContentLoaded", () => {
+        loadUsers();
+    });
+</script>
+{% endblock %}

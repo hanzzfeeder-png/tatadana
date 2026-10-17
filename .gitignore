@@ -1,0 +1,30 @@
+# Environment variables & secrets
+.env
+*.env
+!.env.example
+
+# Python virtualenv & bytecode cache
+venv/
+.venv/
+env/
+__pycache__/
+*.py[cod]
+*$py.class
+
+# Databases & local storage
+storage/*.db
+storage/*.sqlite3
+*.db
+*.sqlite3
+
+# Exports & Generated Reports
+storage/exports/
+*.pdf
+*.xlsx
+*.csv
+
+# Logs & temp
+*.log
+.pytest_cache/
+.coverage
+htmlcov/

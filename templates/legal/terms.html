@@ -1,0 +1,60 @@
+{% extends "base.html" %}
+
+{% block title %}Syarat & Ketentuan — TataDana{% endblock %}
+
+{% block body %}
+<nav class="sticky top-0 z-50 bg-white/90 backdrop-blur-md border-b border-slate-100">
+    <div class="max-w-5xl mx-auto px-4 h-16 flex items-center justify-between">
+        <a href="/" class="flex items-center gap-2">
+            <div class="w-8 h-8 rounded-xl bg-orange-500 text-white font-black flex items-center justify-center">T</div>
+            <span class="font-black text-lg text-slate-900">Tata<span class="text-orange-500">Dana</span></span>
+        </a>
+        <a href="/" class="text-xs font-bold text-slate-600 hover:text-orange-600 flex items-center gap-1">
+            &larr; Kembali ke Beranda
+        </a>
+    </div>
+</nav>
+
+<main class="max-w-4xl mx-auto px-4 py-12 flex-1">
+    <div class="bg-white p-8 md:p-12 rounded-3xl border border-slate-200 shadow-sm text-slate-700 space-y-6 text-sm leading-relaxed">
+        <span class="px-3 py-1 rounded-full text-xs font-bold bg-orange-100 text-orange-700 uppercase tracking-wider">Ketentuan Penggunaan</span>
+        <h1 class="text-3xl font-black text-slate-900">Syarat & Ketentuan Layanan TataDana</h1>
+        <p class="text-xs text-slate-400">Terakhir diperbarui: 17 Oktober 2026</p>
+
+        <section class="space-y-3 pt-4 border-t border-slate-100">
+            <h2 class="text-lg font-bold text-slate-900">1. Ketentuan Umum</h2>
+            <p>
+                Dengan mendaftar dan menggunakan layanan TataDana (baik melalui website maupun Bot Telegram resmi), Anda menyetujui untuk terikat oleh syarat dan ketentuan yang berlaku di bawah ini.
+            </p>
+        </section>
+
+        <section class="space-y-3">
+            <h2 class="text-lg font-bold text-slate-900">2. Akun & Penautan Telegram</h2>
+            <p>
+                Pengguna bertanggung jawab penuh atas keamanan nomor telepon dan akun Telegram yang ditautkan ke akun TataDana. Penautan akun dilakukan melalui kode one-time pairing token yang unik dan kedaluwarsa dalam 10 menit.
+            </p>
+        </section>
+
+        <section class="space-y-3">
+            <h2 class="text-lg font-bold text-slate-900">3. Paket Langganan & Pembayaran</h2>
+            <p>
+                Paket Starter tersedia dengan kuota hingga 50 transaksi per bulan. Paket Pro memberikan akses fitur lanjutan (OCR struk, AI Financial Advisor, dan Export PDF/Excel) seumur hidup (sekali bayar). Pembayaran yang telah diverifikasi bersifat final dan tidak dapat ditarik kembali kecuali ada kegagalan teknis pada aktivasi.
+            </p>
+        </section>
+
+        <section class="space-y-3">
+            <h2 class="text-lg font-bold text-slate-900">4. Batasan Tanggung Jawab</h2>
+            <p>
+                TataDana berfungsi sebagai alat bantu pencatatan dan evaluasi keuangan pribadi berbasis AI. Saran yang diberikan oleh AI Financial Advisor merupakan analisis matematis dan edukasi finansial, bukan merupakan anjuran investasi resmi atau nasihat perbankan legal.
+            </p>
+        </section>
+
+        <section class="space-y-3">
+            <h2 class="text-lg font-bold text-slate-900">5. Kontak Bantuan</h2>
+            <p>
+                Pertanyaan mengenai ketentuan ini dapat dikirimkan ke tim dukungan pelanggan TataDana melalui email: <b>support@tatadana.id</b>.
+            </p>
+        </section>
+    </div>
+</main>
+{% endblock %}

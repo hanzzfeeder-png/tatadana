@@ -1,0 +1,206 @@
+{% extends "admin/layout.html" %}
+
+{% block admin_title %}Ringkasan Admin & Metrik TataDana{% endblock %}
+{% block admin_subtitle %}Status ekosistem, perputaran transaksi, performa AI, dan antrean verifikasi{% endblock %}
+
+{% block admin_content %}
+<div class="space-y-6">
+    <!-- Top Action Bar -->
+    <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-4 p-5 rounded-2xl bg-white border border-slate-200 shadow-sm">
+        <div>
+            <h3 class="font-bold text-sm text-slate-900">Rekapitulasi Platform & Export Data</h3>
+            <p class="text-xs text-slate-500 mt-0.5">Unduh data seluruh pengguna beserta total perputaran transaksinya untuk analisis internal.</p>
+        </div>
+        <button onclick="handleExportAllUsers()" class="px-4 py-2.5 rounded-xl text-xs font-bold bg-purple-600 hover:bg-purple-700 text-white flex items-center justify-center gap-2 shadow-md shadow-purple-600/20 whitespace-nowrap">
+            <i data-lucide="download" class="w-4 h-4"></i>
+            <span>Export Data Pengguna (.JSON)</span>
+        </button>
+    </div>
+
+    <!-- 4 Stats Cards Grid -->
+    <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+        <!-- Card 1: Total Pengguna -->
+        <div class="p-5 rounded-2xl bg-white border border-slate-200 shadow-sm">
+            <div class="flex items-center justify-between">
+                <span class="text-xs font-bold text-slate-400 uppercase tracking-wider">Total Pengguna</span>
+                <span class="p-2 rounded-xl bg-blue-50 text-blue-600"><i data-lucide="users" class="w-4 h-4"></i></span>
+            </div>
+            <div id="adm-total-users" class="text-2xl font-black text-slate-900 mt-2">0</div>
+            <div class="flex items-center gap-2 text-[11px] mt-2 font-medium">
+                <span id="adm-starter-badge" class="px-2 py-0.5 rounded bg-slate-100 text-slate-600 font-bold">0 Starter</span>
+                <span id="adm-pro-badge" class="px-2 py-0.5 rounded bg-amber-100 text-amber-800 font-bold">0 Pro</span>
+            </div>
+        </div>
+
+        <!-- Card 2: Total Transaksi Sistem -->
+        <div class="p-5 rounded-2xl bg-white border border-slate-200 shadow-sm">
+            <div class="flex items-center justify-between">
+                <span class="text-xs font-bold text-slate-400 uppercase tracking-wider">Transaksi Sistem</span>
+                <span class="p-2 rounded-xl bg-emerald-50 text-emerald-600"><i data-lucide="receipt" class="w-4 h-4"></i></span>
+            </div>
+            <div id="adm-total-tx-count" class="text-2xl font-black text-slate-900 mt-2">0</div>
+            <div class="text-[11px] text-emerald-600 font-semibold mt-2" id="adm-total-tx-amount">
+                Volume: Rp 0
+            </div>
+        </div>
+
+        <!-- Card 3: Perkiraan Biaya AI Bulan Ini -->
+        <div class="p-5 rounded-2xl bg-white border border-slate-200 shadow-sm">
+            <div class="flex items-center justify-between">
+                <span class="text-xs font-bold text-slate-400 uppercase tracking-wider">Biaya AI Bulan Ini</span>
+                <span class="p-2 rounded-xl bg-purple-50 text-purple-600"><i data-lucide="cpu" class="w-4 h-4"></i></span>
+            </div>
+            <div id="adm-ai-cost" class="text-2xl font-black text-purple-600 mt-2">Rp 0</div>
+            <div class="text-[11px] text-slate-500 mt-2 flex items-center justify-between">
+                <span id="adm-ai-calls">0 Panggilan</span>
+                <span id="adm-ai-tokens" class="font-mono text-slate-400">0 tokens</span>
+            </div>
+        </div>
+
+        <!-- Card 4: Pembayaran Pending -->
+        <div class="p-5 rounded-2xl bg-white border border-slate-200 shadow-sm">
+            <div class="flex items-center justify-between">
+                <span class="text-xs font-bold text-slate-400 uppercase tracking-wider">Verifikasi Bayar</span>
+                <span class="p-2 rounded-xl bg-rose-50 text-rose-600"><i data-lucide="credit-card" class="w-4 h-4"></i></span>
+            </div>
+            <div id="adm-pending-pay" class="text-2xl font-black text-rose-600 mt-2">0</div>
+            <div class="text-[11px] text-slate-500 mt-2 flex items-center justify-between">
+                <span>Pesanan Menunggu</span>
+                <a href="/admin/payments" class="text-rose-600 font-bold hover:underline">Periksa &rarr;</a>
+            </div>
+        </div>
+    </div>
+
+    <!-- Quick Navigation Shortcuts -->
+    <div class="grid grid-cols-1 md:grid-cols-3 gap-5">
+        <a href="/admin/ai-providers" class="p-5 rounded-2xl bg-white border border-slate-200 shadow-sm hover:border-purple-400 transition-all flex flex-col justify-between group">
+            <div>
+                <div class="w-10 h-10 rounded-xl bg-purple-50 text-purple-600 flex items-center justify-center mb-3 group-hover:scale-105 transition-transform">
+                    <i data-lucide="cpu" class="w-5 h-5"></i>
+                </div>
+                <h4 class="font-bold text-sm text-slate-900">Kelola Provider AI</h4>
+                <p class="text-xs text-slate-500 mt-1">Konfigurasi API key terenkripsi Gemini, OpenAI, DeepSeek, prioritas, dan mode failover.</p>
+            </div>
+            <span class="text-xs font-bold text-purple-600 mt-4 flex items-center gap-1">Buka Konfigurasi &rarr;</span>
+        </a>
+
+        <a href="/admin/users" class="p-5 rounded-2xl bg-white border border-slate-200 shadow-sm hover:border-blue-400 transition-all flex flex-col justify-between group">
+            <div>
+                <div class="w-10 h-10 rounded-xl bg-blue-50 text-blue-600 flex items-center justify-center mb-3 group-hover:scale-105 transition-transform">
+                    <i data-lucide="users" class="w-5 h-5"></i>
+                </div>
+                <h4 class="font-bold text-sm text-slate-900">Daftar Pengguna & Impersonasi</h4>
+                <p class="text-xs text-slate-500 mt-1">Cari data pengguna, masuk ke tampilan user tanpa password, atau tinjau transaksi troubleshooting.</p>
+            </div>
+            <span class="text-xs font-bold text-blue-600 mt-4 flex items-center gap-1">Kelola Pengguna &rarr;</span>
+        </a>
+
+        <a href="/admin/payments" class="p-5 rounded-2xl bg-white border border-slate-200 shadow-sm hover:border-emerald-400 transition-all flex flex-col justify-between group">
+            <div>
+                <div class="w-10 h-10 rounded-xl bg-emerald-50 text-emerald-600 flex items-center justify-center mb-3 group-hover:scale-105 transition-transform">
+                    <i data-lucide="credit-card" class="w-5 h-5"></i>
+                </div>
+                <h4 class="font-bold text-sm text-slate-900">Verifikasi Pembayaran</h4>
+                <p class="text-xs text-slate-500 mt-1">Approve pembayaran upgrade paket Pro pengguna secara instan atau tolak pesanan tidak valid.</p>
+            </div>
+            <span class="text-xs font-bold text-emerald-600 mt-4 flex items-center gap-1">Buka Verifikasi &rarr;</span>
+        </a>
+    </div>
+
+    <!-- Recent Audit Logs Section -->
+    <div class="p-6 rounded-2xl bg-white border border-slate-200 shadow-sm">
+        <div class="flex items-center justify-between mb-4">
+            <div>
+                <h3 class="font-bold text-sm text-slate-900 flex items-center gap-2">
+                    <i data-lucide="eye" class="w-4 h-4 text-purple-600"></i>
+                    <span>Aktivitas Audit Superadmin Terbaru</span>
+                </h3>
+                <p class="text-xs text-slate-500">Log transparansi setiap tindakan administratif dan inspeksi data</p>
+            </div>
+            <a href="/admin/audit-logs" class="text-xs font-bold text-purple-600 hover:underline">Lihat Semua &rarr;</a>
+        </div>
+
+        <div class="overflow-x-auto">
+            <table class="w-full text-left text-xs">
+                <thead>
+                    <tr class="border-b border-slate-100 text-slate-400 uppercase font-semibold">
+                        <th class="pb-3">Waktu (WIB)</th>
+                        <th class="pb-3">Admin</th>
+                        <th class="pb-3">Aksi</th>
+                        <th class="pb-3">Target Pengguna</th>
+                        <th class="pb-3">Rincian</th>
+                    </tr>
+                </thead>
+                <tbody id="recent-audit-table" class="divide-y divide-slate-100 font-medium">
+                    <tr><td colspan="5" class="py-6 text-center text-slate-400">Memuat log audit...</td></tr>
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+{{ super() }}
+<script>
+    async function loadAdminOverview() {
+        try {
+            const res = await apiCall("/api/admin/overview");
+            const d = res.data;
+
+            // 1. Stats Cards
+            document.getElementById("adm-total-users").innerText = d.total_users;
+            document.getElementById("adm-starter-badge").innerText = `${d.starter_users} Starter`;
+            document.getElementById("adm-pro-badge").innerText = `${d.pro_users} Pro`;
+
+            document.getElementById("adm-total-tx-count").innerText = `${d.total_transactions} Transaksi`;
+            document.getElementById("adm-total-tx-amount").innerText = `Volume: ${formatIDR(d.total_transaction_amount)}`;
+
+            document.getElementById("adm-ai-cost").innerText = `Rp ${Math.round(d.ai_estimated_cost_idr).toLocaleString('id-ID')}`;
+            document.getElementById("adm-ai-calls").innerText = `${d.ai_calls_month} Panggilan`;
+            document.getElementById("adm-ai-tokens").innerText = `${d.ai_tokens_month.toLocaleString()} tokens`;
+
+            document.getElementById("adm-pending-pay").innerText = d.pending_payments_count;
+
+            // 2. Recent Audit Table
+            const tbody = document.getElementById("recent-audit-table");
+            if (!d.recent_audit_logs || d.recent_audit_logs.length === 0) {
+                tbody.innerHTML = `<tr><td colspan="5" class="py-6 text-center text-slate-400">Belum ada aktivitas audit yang tercatat.</td></tr>`;
+            } else {
+                tbody.innerHTML = d.recent_audit_logs.map(log => `
+                    <tr class="hover:bg-slate-50/70 transition-colors">
+                        <td class="py-3 text-slate-500">${(log.created_at || '').slice(0, 19)}</td>
+                        <td class="py-3 font-bold text-purple-700">${log.admin_name || 'Superadmin'}</td>
+                        <td class="py-3"><span class="px-2 py-0.5 rounded text-[10px] font-bold bg-slate-100 text-slate-700">${log.action}</span></td>
+                        <td class="py-3 font-medium text-slate-800">${log.target_user_name || '-'}</td>
+                        <td class="py-3 text-slate-600 max-w-xs truncate">${log.details || '-'}</td>
+                    </tr>
+                `).join('');
+            }
+        } catch (e) {
+            console.error("Gagal load admin overview", e);
+            showToast("Gagal memuat overview: " + e.message, "error");
+        }
+    }
+
+    async function handleExportAllUsers() {
+        try {
+            const res = await apiCall("/api/admin/export-all-users");
+            const blob = new Blob([JSON.stringify(res.data, null, 2)], { type: "application/json" });
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement("a");
+            a.href = url;
+            a.download = `TataDana_Rekap_Pengguna_${new Date().toISOString().slice(0, 10)}.json`;
+            a.click();
+            URL.revokeObjectURL(url);
+            showToast("Data pengguna berhasil di-export!", "success");
+        } catch (e) {
+            showToast("Gagal export: " + e.message, "error");
+        }
+    }
+
+    document.addEventListener("DOMContentLoaded", () => {
+        loadAdminOverview();
+    });
+</script>
+{% endblock %}

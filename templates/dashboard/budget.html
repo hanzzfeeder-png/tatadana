@@ -1,0 +1,213 @@
+{% extends "dashboard/layout.html" %}
+
+{% block page_title %}Anggaran & Kategori{% endblock %}
+{% block page_subtitle %}Pantau batas pengeluaran bulanan dan kelola kategori transaksi Anda{% endblock %}
+
+{% block content %}
+<div class="space-y-6">
+    <!-- Top Action Card -->
+    <div class="card-premium p-6 bg-gradient-to-r from-orange-500 to-orange-600 text-white flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+        <div>
+            <h2 class="text-lg font-black tracking-tight">Kendalikan Pengeluaran Sebelum Boncos!</h2>
+            <p class="text-xs text-orange-100 mt-1 max-w-xl">
+                TataDana otomatis mengirimkan peringatan via Telegram saat pengeluaran kategori mencapai 80% dan 100% dari budget bulanan Anda.
+            </p>
+        </div>
+        <button onclick="openModal('add-category-modal')" class="px-4 py-2.5 rounded-xl bg-white text-orange-600 hover:bg-orange-50 font-bold text-xs shadow-lg shadow-orange-950/20 whitespace-nowrap">
+            + Tambah Kategori
+        </button>
+    </div>
+
+    <!-- Category Budgets Grid -->
+    <div>
+        <h3 class="text-sm font-bold text-slate-900 mb-3 flex items-center justify-between">
+            <span>Progress Budget Bulan Ini</span>
+            <span id="budget-count-badge" class="text-xs font-semibold text-slate-400">Memuat...</span>
+        </h3>
+
+        <div id="budgets-container" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+            <div class="card-premium p-6 text-center text-xs text-slate-400 col-span-full">Memuat data anggaran...</div>
+        </div>
+    </div>
+</div>
+
+<!-- Modal: Tambah Kategori & Budget -->
+<div id="add-category-modal" class="fixed inset-0 bg-slate-900/40 backdrop-blur-sm z-50 hidden items-center justify-center p-4">
+    <div class="bg-white rounded-2xl max-w-md w-full p-6 shadow-2xl relative">
+        <button onclick="closeModal('add-category-modal')" class="absolute top-5 right-5 text-slate-400 hover:text-slate-600 text-xl font-bold">&times;</button>
+        <h3 class="text-base font-bold text-slate-900 mb-1">Tambah Kategori Baru</h3>
+        <p class="text-xs text-slate-500 mb-5">Kustomisasi emoji, warna, dan budget bulanan.</p>
+
+        <form id="add-category-form" onsubmit="handleCreateCategory(event)" class="space-y-4">
+            <div>
+                <label class="block text-xs font-semibold text-slate-700 mb-1">Nama Kategori</label>
+                <input type="text" id="cat-name" required placeholder="Contoh: Skincare & Perawatan" class="input-orange w-full px-3.5 py-2.5 rounded-xl border border-slate-200 text-sm">
+            </div>
+
+            <div class="grid grid-cols-2 gap-3">
+                <div>
+                    <label class="block text-xs font-semibold text-slate-700 mb-1">Jenis</label>
+                    <select id="cat-type" class="input-orange w-full px-3.5 py-2.5 rounded-xl border border-slate-200 text-sm bg-white">
+                        <option value="expense">Pengeluaran</option>
+                        <option value="income">Pemasukan</option>
+                    </select>
+                </div>
+                <div>
+                    <label class="block text-xs font-semibold text-slate-700 mb-1">Emoji Icon</label>
+                    <input type="text" id="cat-icon" value="🏷️" required class="input-orange w-full px-3.5 py-2.5 rounded-xl border border-slate-200 text-sm text-center">
+                </div>
+            </div>
+
+            <div>
+                <label class="block text-xs font-semibold text-slate-700 mb-1">Budget Bulanan (Rp) — Opsional</label>
+                <input type="number" id="cat-budget" placeholder="0" min="0" class="input-orange w-full px-3.5 py-2.5 rounded-xl border border-slate-200 text-sm">
+                <span class="text-[10px] text-slate-400 mt-1 block">Biarkan 0 jika tidak ingin dibatasi anggaran bulanan.</span>
+            </div>
+
+            <button type="submit" id="btn-save-category" class="btn-primary w-full py-2.5 rounded-xl text-sm font-bold mt-2">
+                Simpan Kategori
+            </button>
+        </form>
+    </div>
+</div>
+
+<!-- Modal: Edit Budget -->
+<div id="edit-budget-modal" class="fixed inset-0 bg-slate-900/40 backdrop-blur-sm z-50 hidden items-center justify-center p-4">
+    <div class="bg-white rounded-2xl max-w-sm w-full p-6 shadow-2xl relative">
+        <button onclick="closeModal('edit-budget-modal')" class="absolute top-5 right-5 text-slate-400 hover:text-slate-600 text-xl font-bold">&times;</button>
+        <h3 class="text-base font-bold text-slate-900 mb-1" id="edit-cat-title">Set Budget Kategori</h3>
+        <p class="text-xs text-slate-500 mb-4">Ubah alokasi pengeluaran bulanan kategori ini.</p>
+
+        <form id="edit-budget-form" onsubmit="handleUpdateBudget(event)" class="space-y-4">
+            <input type="hidden" id="edit-cat-id">
+            <div>
+                <label class="block text-xs font-semibold text-slate-700 mb-1">Alokasi Budget (Rp)</label>
+                <input type="number" id="edit-cat-amount" required min="0" class="input-orange w-full px-3.5 py-2.5 rounded-xl border border-slate-200 text-sm">
+            </div>
+            <button type="submit" class="btn-primary w-full py-2.5 rounded-xl text-sm font-bold">Simpan Perubahan</button>
+        </form>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+{{ super() }}
+<script>
+    async function loadBudgets() {
+        const container = document.getElementById("budgets-container");
+        try {
+            const res = await apiCall("/api/categories/budgets");
+            const list = res.data || [];
+            
+            document.getElementById("budget-count-badge").innerText = `${list.length} Kategori`;
+
+            if (list.length === 0) {
+                container.innerHTML = `<div class="card-premium p-8 text-center text-xs text-slate-400 col-span-full">Belum ada kategori yang terdaftar.</div>`;
+                return;
+            }
+
+            container.innerHTML = list.map(b => {
+                const hasBudget = b.monthly_budget > 0;
+                const statusColor = b.is_exceeded ? "bg-red-500" : (b.is_over_80 ? "bg-amber-500" : "bg-orange-500");
+                const badgeWarning = b.is_exceeded 
+                    ? `<span class="px-2 py-0.5 rounded text-[10px] font-bold bg-red-100 text-red-700">Melebihi Budget!</span>`
+                    : (b.is_over_80 ? `<span class="px-2 py-0.5 rounded text-[10px] font-bold bg-amber-100 text-amber-700">> 80% Terpakai</span>` : '');
+
+                return `
+                <div class="card-premium p-5 flex flex-col justify-between">
+                    <div>
+                        <div class="flex items-center justify-between">
+                            <div class="flex items-center gap-2.5">
+                                <span class="text-xl">${b.icon || '🏷️'}</span>
+                                <div>
+                                    <h4 class="font-bold text-sm text-slate-900">${b.name}</h4>
+                                    <span class="text-[11px] text-slate-400">${hasBudget ? 'Budget: ' + formatIDR(b.monthly_budget) : 'Tanpa batas budget'}</span>
+                                </div>
+                            </div>
+                            <button onclick="openEditBudget('${b.category_id}', '${b.name}', ${b.monthly_budget})" class="p-1.5 rounded-lg text-slate-400 hover:text-slate-700 hover:bg-slate-100 text-xs" title="Edit Budget">
+                                <i data-lucide="edit-3" class="w-4 h-4"></i>
+                            </button>
+                        </div>
+
+                        ${hasBudget ? `
+                            <div class="mt-4">
+                                <div class="flex justify-between text-xs font-semibold mb-1">
+                                    <span class="text-slate-600">${formatIDR(b.spent)}</span>
+                                    <span class="${b.is_exceeded ? 'text-red-600' : 'text-slate-900'}">${b.percent}%</span>
+                                </div>
+                                <div class="w-full h-2.5 rounded-full bg-slate-100 overflow-hidden">
+                                    <div class="${statusColor} h-full rounded-full transition-all duration-500" style="width: ${Math.min(100, b.percent)}%"></div>
+                                </div>
+                                <div class="flex justify-between items-center mt-2">
+                                    <span class="text-[11px] text-slate-400">Sisa: <b class="text-slate-700">${formatIDR(b.remaining)}</b></span>
+                                    ${badgeWarning}
+                                </div>
+                            </div>
+                        ` : `
+                            <div class="mt-4 pt-3 border-t border-slate-100 flex justify-between items-center text-xs">
+                                <span class="text-slate-400">Total terpakai:</span>
+                                <span class="font-bold text-slate-900">${formatIDR(b.spent)}</span>
+                            </div>
+                        `}
+                    </div>
+                </div>
+                `;
+            }).join('');
+
+            if (window.lucide) window.lucide.createIcons();
+        } catch (e) {
+            container.innerHTML = `<div class="card-premium p-6 text-center text-xs text-red-500 col-span-full">Gagal memuat budget: ${e.message}</div>`;
+        }
+    }
+
+    function openEditBudget(id, name, amount) {
+        document.getElementById("edit-cat-id").value = id;
+        document.getElementById("edit-cat-title").innerText = `Atur Budget: ${name}`;
+        document.getElementById("edit-cat-amount").value = amount || 0;
+        openModal("edit-budget-modal");
+    }
+
+    async function handleUpdateBudget(e) {
+        e.preventDefault();
+        const id = document.getElementById("edit-cat-id").value;
+        const amount = parseFloat(document.getElementById("edit-cat-amount").value);
+
+        try {
+            await apiCall(`/api/categories/${id}`, {
+                method: "PUT",
+                body: JSON.stringify({ monthly_budget: amount })
+            });
+            showToast("Budget kategori berhasil diperbarui!", "success");
+            closeModal("edit-budget-modal");
+            loadBudgets();
+        } catch (err) {
+            showToast(err.message, "error");
+        }
+    }
+
+    async function handleCreateCategory(e) {
+        e.preventDefault();
+        const name = document.getElementById("cat-name").value;
+        const type = document.getElementById("cat-type").value;
+        const icon = document.getElementById("cat-icon").value;
+        const budget = parseFloat(document.getElementById("cat-budget").value) || 0.0;
+
+        try {
+            await apiCall("/api/categories", {
+                method: "POST",
+                body: JSON.stringify({ name, type, icon, monthly_budget: budget })
+            });
+            showToast("Kategori baru berhasil dibuat!", "success");
+            closeModal("add-category-modal");
+            document.getElementById("add-category-form").reset();
+            loadBudgets();
+        } catch (err) {
+            showToast(err.message, "error");
+        }
+    }
+
+    document.addEventListener("DOMContentLoaded", () => {
+        loadBudgets();
+    });
+</script>
+{% endblock %}

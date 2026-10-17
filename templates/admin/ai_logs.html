@@ -1,0 +1,160 @@
+{% extends "admin/layout.html" %}
+
+{% block admin_title %}Log & Monitoring Biaya AI{% endblock %}
+{% block admin_subtitle %}Riwayat eksekusi pemanggilan LLM, latensi waktu, dan konsumsi token API{% endblock %}
+
+{% block admin_content %}
+<div class="space-y-6">
+    <!-- Filter Bar Card -->
+    <div class="p-5 rounded-2xl bg-white border border-slate-200 shadow-sm flex flex-col md:flex-row md:items-center justify-between gap-4">
+        <div class="flex flex-wrap items-center gap-3">
+            <div>
+                <label class="block text-[11px] font-bold text-slate-400 uppercase tracking-wider mb-1">Filter Provider</label>
+                <select id="filter-provider" onchange="changeFilter()" class="px-3 py-2 rounded-xl border border-slate-200 bg-white text-xs text-slate-700 focus:outline-none focus:border-orange-500">
+                    <option value="">Semua Provider</option>
+                    <option value="gemini">Google Gemini</option>
+                    <option value="openai">OpenAI</option>
+                    <option value="deepseek">DeepSeek</option>
+                </select>
+            </div>
+            <div>
+                <label class="block text-[11px] font-bold text-slate-400 uppercase tracking-wider mb-1">Status Eksekusi</label>
+                <select id="filter-status" onchange="changeFilter()" class="px-3 py-2 rounded-xl border border-slate-200 bg-white text-xs text-slate-700 focus:outline-none focus:border-orange-500">
+                    <option value="">Semua Status</option>
+                    <option value="success">Success</option>
+                    <option value="error">Error</option>
+                </select>
+            </div>
+        </div>
+
+        <div class="flex items-center gap-2 self-end md:self-center">
+            <button onclick="loadAILogs(currentPage)" class="px-3.5 py-2 rounded-xl text-xs font-semibold bg-slate-100 hover:bg-slate-200 text-slate-700 flex items-center gap-1.5 transition-colors">
+                <i data-lucide="refresh-cw" class="w-3.5 h-3.5"></i>
+                <span>Refresh Log</span>
+            </button>
+        </div>
+    </div>
+
+    <!-- Logs Table Card -->
+    <div class="rounded-2xl bg-white border border-slate-200 shadow-sm overflow-hidden">
+        <div class="p-5 border-b border-slate-100 flex items-center justify-between bg-slate-50/50">
+            <div>
+                <h4 class="font-bold text-sm text-slate-900">Riwayat Panggilan AI Terbaru</h4>
+                <p class="text-xs text-slate-500">Log konsumsi token LLM untuk audit performa dan akurasi biaya</p>
+            </div>
+            <span id="log-total-badge" class="text-xs font-bold text-slate-500">Total: 0</span>
+        </div>
+
+        <div class="overflow-x-auto">
+            <table class="w-full text-left text-xs">
+                <thead>
+                    <tr class="border-b border-slate-100 text-slate-400 uppercase font-semibold bg-white">
+                        <th class="py-3 px-4">Waktu (WIB)</th>
+                        <th class="py-3 px-4">Pengguna</th>
+                        <th class="py-3 px-4">Provider & Model</th>
+                        <th class="py-3 px-4">Endpoint</th>
+                        <th class="py-3 px-4">Tokens</th>
+                        <th class="py-3 px-4">Latensi</th>
+                        <th class="py-3 px-4 text-right">Status</th>
+                    </tr>
+                </thead>
+                <tbody id="logs-table-body" class="divide-y divide-slate-100 font-medium text-slate-700">
+                    <tr><td colspan="7" class="py-8 text-center text-slate-400">Memuat log AI...</td></tr>
+                </tbody>
+            </table>
+        </div>
+
+        <!-- Pagination Controls -->
+        <div class="p-4 border-t border-slate-100 flex items-center justify-between text-xs text-slate-600 bg-slate-50/50">
+            <span id="page-info">Halaman 1 dari 1</span>
+            <div class="flex items-center gap-2">
+                <button id="btn-prev" onclick="goToPage(currentPage - 1)" class="px-3 py-1.5 rounded-lg border border-slate-200 bg-white hover:bg-slate-50 disabled:opacity-50 disabled:cursor-not-allowed">
+                    &larr; Sebelumnya
+                </button>
+                <button id="btn-next" onclick="goToPage(currentPage + 1)" class="px-3 py-1.5 rounded-lg border border-slate-200 bg-white hover:bg-slate-50 disabled:opacity-50 disabled:cursor-not-allowed">
+                    Selanjutnya &rarr;
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+{{ super() }}
+<script>
+    let currentPage = 1;
+    let totalPages = 1;
+
+    function changeFilter() {
+        currentPage = 1;
+        loadAILogs(1);
+    }
+
+    function goToPage(page) {
+        if (page < 1 || page > totalPages) return;
+        currentPage = page;
+        loadAILogs(page);
+    }
+
+    async function loadAILogs(page = 1) {
+        const tbody = document.getElementById("logs-table-body");
+        const prov = document.getElementById("filter-provider").value;
+        const stat = document.getElementById("filter-status").value;
+
+        let query = `/api/admin/ai-logs?page=${page}&limit=20`;
+        if (prov) query += `&provider=${encodeURIComponent(prov)}`;
+        if (stat) query += `&status=${encodeURIComponent(stat)}`;
+
+        try {
+            const res = await apiCall(query);
+            const list = res.data || [];
+            const pag = res.pagination || { page: 1, total_pages: 1, total: 0 };
+
+            currentPage = pag.page;
+            totalPages = pag.total_pages;
+
+            document.getElementById("log-total-badge").innerText = `Total: ${pag.total} panggilan`;
+            document.getElementById("page-info").innerText = `Halaman ${pag.page} dari ${pag.total_pages}`;
+            document.getElementById("btn-prev").disabled = (pag.page <= 1);
+            document.getElementById("btn-next").disabled = (pag.page >= pag.total_pages);
+
+            if (list.length === 0) {
+                tbody.innerHTML = `<tr><td colspan="7" class="py-8 text-center text-slate-400">Belum ada log AI yang cocok.</td></tr>`;
+                return;
+            }
+
+            tbody.innerHTML = list.map(l => `
+                <tr class="hover:bg-slate-50/70 transition-colors">
+                    <td class="py-3 px-4 text-slate-500 font-mono text-[11px]">${(l.created_at || '').slice(0, 19)}</td>
+                    <td class="py-3 px-4 font-semibold text-slate-900">${l.user_name || 'System / Webhook'}</td>
+                    <td class="py-3 px-4">
+                        <span class="font-bold text-orange-600">${l.provider}</span>
+                        <span class="text-slate-400 block text-[10px] font-mono">${l.model}</span>
+                    </td>
+                    <td class="py-3 px-4 font-mono text-slate-600">${l.endpoint_type || 'parse_transaction'}</td>
+                    <td class="py-3 px-4 font-mono text-slate-700">
+                        <span class="font-bold">${l.tokens_used}</span>
+                        <span class="text-[10px] text-slate-400 block">(${l.prompt_tokens}p + ${l.completion_tokens}c)</span>
+                    </td>
+                    <td class="py-3 px-4 font-mono ${l.latency_ms > 1500 ? 'text-amber-600 font-bold' : 'text-emerald-600 font-bold'}">${l.latency_ms} ms</td>
+                    <td class="py-3 px-4 text-right">
+                        <span class="inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-bold ${l.status === 'success' ? 'bg-emerald-50 text-emerald-700 border border-emerald-200' : 'bg-rose-50 text-rose-700 border border-rose-200'}">
+                            ${l.status.toUpperCase()}
+                        </span>
+                        ${l.error ? `<div class="text-[10px] text-rose-500 truncate max-w-xs text-right mt-0.5" title="${l.error}">${l.error}</div>` : ''}
+                    </td>
+                </tr>
+            `).join('');
+
+            if (window.lucide) window.lucide.createIcons();
+        } catch (e) {
+            tbody.innerHTML = `<tr><td colspan="7" class="py-8 text-center text-rose-500">Gagal memuat log: ${e.message}</td></tr>`;
+        }
+    }
+
+    document.addEventListener("DOMContentLoaded", () => {
+        loadAILogs(1);
+    });
+</script>
+{% endblock %}

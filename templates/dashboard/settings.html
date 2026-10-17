@@ -1,0 +1,610 @@
+{% extends "dashboard/layout.html" %}
+
+{% block page_title %}Pengaturan Akun{% endblock %}
+{% block page_subtitle %}Konfigurasi profil, integrasi bot Telegram, reminder, dan paket langganan{% endblock %}
+
+{% block content %}
+<div class="space-y-6 max-w-4xl">
+    <!-- Tabs Header -->
+    <div class="flex border-b border-slate-200 gap-6 text-sm font-semibold overflow-x-auto">
+        <button onclick="switchTab('profile')" id="tab-btn-profile" class="pb-3 border-b-2 border-orange-500 text-orange-600 flex items-center gap-2 whitespace-nowrap">
+            <i data-lucide="user" class="w-4 h-4"></i>
+            <span>Profil Saya</span>
+        </button>
+        <button onclick="switchTab('telegram')" id="tab-btn-telegram" class="pb-3 border-b-2 border-transparent text-slate-500 hover:text-slate-800 flex items-center gap-2 whitespace-nowrap">
+            <i data-lucide="bot" class="w-4 h-4"></i>
+            <span>Integrasi Telegram</span>
+        </button>
+        <button onclick="switchTab('reminder')" id="tab-btn-reminder" class="pb-3 border-b-2 border-transparent text-slate-500 hover:text-slate-800 flex items-center gap-2 whitespace-nowrap">
+            <i data-lucide="bell" class="w-4 h-4"></i>
+            <span>Reminder Harian</span>
+        </button>
+        <button onclick="switchTab('plan')" id="tab-btn-plan" class="pb-3 border-b-2 border-transparent text-slate-500 hover:text-slate-800 flex items-center gap-2 whitespace-nowrap">
+            <i data-lucide="zap" class="w-4 h-4"></i>
+            <span>Paket & Billing</span>
+        </button>
+    </div>
+
+    <!-- 1. TAB: PROFIL -->
+    <div id="tab-content-profile" class="space-y-6">
+        <div class="card-premium p-6">
+            <h3 class="font-bold text-base text-slate-900 mb-4">Informasi Pribadi</h3>
+            <form id="profile-form" onsubmit="handleUpdateProfile(event)" class="space-y-4 max-w-lg">
+                <div>
+                    <label class="block text-xs font-semibold text-slate-700 mb-1">Nama Lengkap</label>
+                    <input type="text" id="prof-name" value="{{ user.full_name }}" required class="input-orange w-full px-3.5 py-2.5 rounded-xl border border-slate-200 text-sm">
+                </div>
+                <div>
+                    <label class="block text-xs font-semibold text-slate-700 mb-1">Alamat Email</label>
+                    <input type="email" value="{{ user.email }}" disabled class="w-full px-3.5 py-2.5 rounded-xl border border-slate-200 text-sm bg-slate-50 text-slate-500 cursor-not-allowed">
+                </div>
+                <div>
+                    <label class="block text-xs font-semibold text-slate-700 mb-1">Nomor Handphone (Kunci Telegram)</label>
+                    <div class="flex gap-2">
+                        <input type="text" value="{{ user.phone_number }}" disabled class="w-full px-3.5 py-2.5 rounded-xl border border-slate-200 text-sm bg-slate-50 text-slate-500 cursor-not-allowed">
+                        <span class="px-3 py-2.5 rounded-xl text-xs font-bold bg-emerald-100 text-emerald-800 whitespace-nowrap flex items-center gap-1">
+                            ✓ Terverifikasi
+                        </span>
+                    </div>
+                </div>
+                <div>
+                    <label class="block text-xs font-semibold text-slate-700 mb-1">Mata Uang Default</label>
+                    <select id="prof-currency" class="input-orange w-full px-3.5 py-2.5 rounded-xl border border-slate-200 text-sm bg-white">
+                        <option value="IDR" selected>IDR — Rupiah Indonesia (Rp)</option>
+                    </select>
+                </div>
+                <button type="submit" class="btn-primary px-5 py-2.5 rounded-xl text-xs font-bold mt-2">
+                    Simpan Perubahan
+                </button>
+            </form>
+        </div>
+    </div>
+
+    <!-- 2. TAB: TELEGRAM BOT -->
+    <div id="tab-content-telegram" class="hidden space-y-6">
+        <!-- Status Penautan Akun Pengguna -->
+        <div class="card-premium p-6">
+            <div class="flex items-center justify-between pb-4 border-b border-slate-100">
+                <div>
+                    <h3 class="font-bold text-base text-slate-900">Integrasi Akun Telegram Anda</h3>
+                    <p class="text-xs text-slate-500 mt-0.5">Tautkan akun Telegram untuk mencatat keuangan secepat berkirim pesan chat.</p>
+                </div>
+                <div id="tg-user-link-badge">
+                    <span class="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-bold bg-slate-100 text-slate-600">
+                        Memeriksa...
+                    </span>
+                </div>
+            </div>
+
+            <!-- View: Jika Akun Sudah Terhubung -->
+            <div id="tg-linked-container" class="hidden mt-5 p-5 rounded-2xl bg-gradient-to-r from-emerald-50/70 to-teal-50/40 border border-emerald-200">
+                <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+                    <div class="flex items-center gap-3.5">
+                        <div class="w-12 h-12 rounded-2xl bg-emerald-500 text-white flex items-center justify-center font-bold text-xl shadow-lg shadow-emerald-500/20">
+                            ✓
+                        </div>
+                        <div>
+                            <div class="flex items-center gap-2">
+                                <h4 class="font-bold text-sm text-slate-900">Akun Telegram Berhasil Terhubung</h4>
+                                <span class="px-2 py-0.5 rounded text-[10px] font-bold bg-emerald-100 text-emerald-800">Aktif</span>
+                            </div>
+                            <p class="text-xs text-slate-600 mt-0.5" id="tg-linked-detail">Username: @username | ID: 12345678</p>
+                            <span class="text-[11px] text-slate-400 mt-0.5 block" id="tg-linked-date">Terhubung sejak: -</span>
+                        </div>
+                    </div>
+                    <button onclick="handleUnlinkTelegram()" class="px-4 py-2 rounded-xl text-xs font-bold text-red-600 bg-white border border-red-200 hover:bg-red-50 transition-colors whitespace-nowrap">
+                        Putuskan Tautan
+                    </button>
+                </div>
+                <div class="mt-4 pt-3 border-t border-emerald-200/60 text-xs text-slate-600 flex items-center gap-2">
+                    <span class="text-emerald-600 font-bold">● Siap Digunakan:</span>
+                    <span>Buka aplikasi Telegram dan ketik pengeluaranmu (misal: <code>Beli kopi 20rb</code>).</span>
+                </div>
+            </div>
+
+            <!-- View: Jika Akun Belum Terhubung -->
+            <div id="tg-unlinked-container" class="mt-5 space-y-4">
+                <div class="p-5 rounded-2xl bg-orange-50/50 border border-orange-200 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+                    <div>
+                        <h4 class="font-bold text-sm text-slate-900">Mulai Hubungkan Akun via One-Time Pairing Code</h4>
+                        <p class="text-xs text-slate-600 mt-1 max-w-xl">
+                            Klik tombol di samping untuk membuat kode penautan sementara berdurasi 10 menit. Aman, terenkripsi, dan mencegah orang lain mengakses akun Anda.
+                        </p>
+                    </div>
+                    <button onclick="handleGeneratePairingCode()" id="btn-gen-code" class="btn-primary px-5 py-3 rounded-xl text-xs font-bold whitespace-nowrap flex items-center justify-center gap-2 shadow-lg shadow-orange-500/20">
+                        <i data-lucide="key" class="w-4 h-4"></i>
+                        <span>Buat Kode Penautan (10 Menit)</span>
+                    </button>
+                </div>
+
+                <!-- Box Hasil Kode Penautan (Awalnya tersembunyi) -->
+                <div id="pairing-code-result" class="hidden p-6 rounded-2xl bg-white border-2 border-orange-500 shadow-xl space-y-5 animate-in fade-in duration-300">
+                    <div class="flex items-center justify-between pb-3 border-b border-slate-100">
+                        <span class="text-xs font-bold text-orange-600 uppercase tracking-wider">Kode Penautan Akun Anda</span>
+                        <div id="pairing-timer" class="text-xs font-bold text-slate-500 bg-slate-100 px-3 py-1 rounded-full">
+                            Berlaku: <span id="timer-countdown" class="text-orange-600">10:00</span>
+                        </div>
+                    </div>
+
+                    <div class="flex flex-col sm:flex-row items-center justify-between gap-4 bg-orange-50/70 p-4 rounded-xl border border-orange-100">
+                        <div class="text-center sm:text-left">
+                            <span class="text-[11px] text-slate-500 block mb-1">Kode Rahasia Sementara:</span>
+                            <span id="pairing-token-display" class="font-mono text-3xl font-black text-orange-600 tracking-wider">TD-XXXXXX</span>
+                        </div>
+                        <div class="flex items-center gap-2 w-full sm:w-auto">
+                            <button onclick="copyPairingToken()" class="flex-1 sm:flex-initial px-4 py-2.5 rounded-xl border border-slate-300 bg-white hover:bg-slate-50 text-slate-700 font-bold text-xs flex items-center justify-center gap-1.5 shadow-sm">
+                                <i data-lucide="copy" class="w-3.5 h-3.5"></i>
+                                <span id="copy-btn-text">Salin Kode</span>
+                            </button>
+                            <a id="btn-deep-link" href="#" target="_blank" class="flex-1 sm:flex-initial btn-primary px-5 py-2.5 rounded-xl text-xs font-bold flex items-center justify-center gap-1.5 shadow-md shadow-orange-500/20">
+                                <i data-lucide="external-link" class="w-3.5 h-3.5"></i>
+                                <span>Buka Bot di Telegram</span>
+                            </a>
+                        </div>
+                    </div>
+
+                    <div class="text-xs text-slate-600 space-y-2 bg-slate-50 p-4 rounded-xl border border-slate-200">
+                        <span class="font-bold text-slate-800 block">Cara Menyelesaikan Penautan:</span>
+                        <ol class="list-decimal list-inside space-y-1 text-slate-600 pl-1">
+                            <li>Klik tombol <b>Buka Bot di Telegram</b> di atas, atau cari bot <b><span id="pairing-bot-name">@TataDanaBot</span></b> di Telegram.</li>
+                            <li>Tekan tombol <b>START</b> pada bot, atau kirim pesan: <code class="px-2 py-0.5 rounded bg-white border border-slate-200 font-mono text-orange-600" id="pairing-command-preview">/start TD-XXXXXX</code></li>
+                            <li>Bot akan otomatis memverifikasi identitas Anda dan mengirimkan notifikasi sukses!</li>
+                        </ol>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Catatan Keamanan Privasi -->
+            <div class="mt-5 p-3.5 rounded-xl bg-slate-50 border border-slate-200 text-xs text-slate-500 flex items-start gap-2.5">
+                <i data-lucide="shield-check" class="w-4 h-4 text-emerald-600 shrink-0 mt-0.5"></i>
+                <span><b>Jaminan Keamanan:</b> Token bersifat satu kali pakai (*single-use*) dan disimpan dalam bentuk hash SHA-256. Token rahasia bot tidak pernah terekspos ke perangkat frontend.</span>
+            </div>
+        </div>
+
+        {% if user and user.role == 'superadmin' %}
+        <!-- Konfigurasi Server Bot (Hanya Superadmin) -->
+        <div class="card-premium p-6 border-l-4 border-l-purple-600">
+            <div class="flex items-center justify-between pb-3 border-b border-slate-100">
+                <div>
+                    <h3 class="font-bold text-sm text-purple-900 flex items-center gap-2">
+                        <i data-lucide="shield" class="w-4 h-4 text-purple-600"></i>
+                        <span>Pengaturan Server Telegram Bot (Akses Superadmin)</span>
+                    </h3>
+                    <p class="text-xs text-slate-500 mt-0.5">Hubungkan bot Telegram TataDana ke webhook server lokal/produksi.</p>
+                </div>
+                <span class="px-2 py-0.5 rounded text-[10px] font-bold bg-purple-100 text-purple-800">Admin Only</span>
+            </div>
+
+            <form onsubmit="handleTestConnection(event)" class="space-y-4 max-w-lg mt-4">
+                <div>
+                    <label class="block text-xs font-semibold text-slate-700 mb-1">HTTP API Bot Token (@BotFather)</label>
+                    <input type="password" id="tg-token-input" placeholder="1234567890:ABCdefGhIJKlmNoPQRsTUVwxyZ" class="input-orange w-full px-3.5 py-2.5 rounded-xl border border-slate-200 text-sm font-mono">
+                    <span class="text-[11px] text-slate-400 mt-1 block">Token dienkripsi menggunakan Fernet di sisi server.</span>
+                </div>
+                <div class="flex items-center gap-3">
+                    <button type="submit" id="btn-test-connection" class="px-4 py-2 bg-purple-600 hover:bg-purple-700 text-white rounded-xl text-xs font-bold flex items-center gap-2">
+                        <i data-lucide="refresh-cw" class="w-3.5 h-3.5"></i>
+                        <span>Simpan & Daftarkan Webhook</span>
+                    </button>
+                    <span id="test-connection-status-text" class="text-xs text-slate-500"></span>
+                </div>
+            </form>
+        </div>
+        {% endif %}
+
+        <!-- Interactive Telegram Chat Simulation (Test in Web) -->
+        <div class="card-premium p-6">
+            <h3 class="font-bold text-base text-slate-900 mb-1">Simulasi Chat Telegram Langsung</h3>
+            <p class="text-xs text-slate-500 mb-4">Uji coba kemampuan bot TataDana langsung di browser Anda tanpa membuka Telegram.</p>
+
+            <div class="max-w-md bg-slate-900 rounded-2xl p-4 text-white shadow-xl">
+                <div class="flex items-center gap-2.5 pb-3 border-b border-slate-800">
+                    <div class="w-8 h-8 rounded-full bg-orange-500 flex items-center justify-center font-bold text-sm">T</div>
+                    <div>
+                        <div class="text-xs font-bold">TataDana Bot</div>
+                        <div class="text-[10px] text-emerald-400">● bot online</div>
+                    </div>
+                </div>
+
+                <div id="sim-chat-box" class="py-4 space-y-3 min-h-[160px] max-h-80 overflow-y-auto text-xs">
+                    <div class="bg-slate-800 p-3 rounded-xl max-w-[85%] text-slate-200">
+                        Halo! Ketik transaksi kamu seperti: <code>beli bakso 15rb</code> atau klik menu command <code>/saldo</code>
+                    </div>
+                </div>
+
+                <div class="pt-3 border-t border-slate-800 flex gap-2">
+                    <input type="text" id="sim-input" placeholder="Ketik pesan chat..." onkeydown="if(event.key==='Enter') sendSimMessage()" class="flex-1 bg-slate-800 border border-slate-700 rounded-xl px-3 py-2 text-xs text-white focus:outline-none focus:border-orange-500">
+                    <button onclick="sendSimMessage()" class="btn-primary px-3 py-2 rounded-xl text-xs font-bold">Kirim</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- 3. TAB: REMINDER -->
+    <div id="tab-content-reminder" class="hidden space-y-6">
+        <div class="card-premium p-6">
+            <h3 class="font-bold text-base text-slate-900 mb-1">Pengaturan Notifikasi & Reminder</h3>
+            <p class="text-xs text-slate-500 mb-5">Maksimal 2x per hari sesuai kebijakan produk untuk kenyamanan pengguna.</p>
+
+            <form onsubmit="handleUpdateReminder(event)" class="space-y-5 max-w-lg">
+                <!-- Toggle Active -->
+                <div class="flex items-center justify-between p-4 rounded-xl bg-slate-50 border border-slate-200">
+                    <div>
+                        <div class="font-bold text-xs text-slate-900">Aktifkan Reminder Otomatis</div>
+                        <div class="text-[11px] text-slate-500 mt-0.5">Kirim pesan pengingat catat keuangan ke Telegram</div>
+                    </div>
+                    <label class="relative inline-flex items-center cursor-pointer">
+                        <input type="checkbox" id="rem-is-active" class="sr-only peer" checked>
+                        <div class="w-11 h-6 bg-slate-200 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-slate-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-orange-500"></div>
+                    </label>
+                </div>
+
+                <!-- Frequency -->
+                <div>
+                    <label class="block text-xs font-semibold text-slate-700 mb-1">Frekuensi Pengingat</label>
+                    <select id="rem-frequency" onchange="toggleFrequencyTimes()" class="input-orange w-full px-3.5 py-2.5 rounded-xl border border-slate-200 text-sm bg-white">
+                        <option value="1">1x Sehari (Rekomendasi)</option>
+                        <option value="2">2x Sehari (Pagi & Malam)</option>
+                    </select>
+                </div>
+
+                <!-- Times -->
+                <div class="grid grid-cols-2 gap-3">
+                    <div>
+                        <label class="block text-xs font-semibold text-slate-700 mb-1">Jam Reminder 1 (WIB)</label>
+                        <input type="time" id="rem-time-1" value="20:00" class="input-orange w-full px-3.5 py-2.5 rounded-xl border border-slate-200 text-sm bg-white">
+                    </div>
+                    <div id="rem-time-2-container" class="hidden">
+                        <label class="block text-xs font-semibold text-slate-700 mb-1">Jam Reminder 2 (WIB)</label>
+                        <input type="time" id="rem-time-2" value="08:00" class="input-orange w-full px-3.5 py-2.5 rounded-xl border border-slate-200 text-sm bg-white">
+                    </div>
+                </div>
+
+                <!-- Preview Box -->
+                <div>
+                    <label class="block text-xs font-semibold text-slate-700 mb-1">Preview Pesan Reminder</label>
+                    <div class="p-3.5 rounded-xl bg-amber-50/70 border border-amber-200 font-mono text-xs text-amber-900 whitespace-pre-line" id="rem-preview-box">
+⏰ Reminder Keuangan!
+Jangan lupa catat pengeluaran hari ini ya 📝
+Pencatatan rutin = keuangan lebih terkontrol 💪
+Ketik transaksimu sekarang!
+                    </div>
+                </div>
+
+                <button type="submit" class="btn-primary px-5 py-2.5 rounded-xl text-xs font-bold">
+                    Simpan Pengaturan Reminder
+                </button>
+            </form>
+        </div>
+    </div>
+
+    <!-- 4. TAB: PAKET & BILLING -->
+    <div id="tab-content-plan" class="hidden space-y-6">
+        <div class="card-premium p-6">
+            <div class="flex items-center justify-between pb-4 border-b border-slate-100">
+                <div>
+                    <h3 class="font-bold text-base text-slate-900">Paket Langganan Anda</h3>
+                    <p class="text-xs text-slate-500 mt-0.5">Upgrade untuk membuka seluruh fitur premium tanpa batas.</p>
+                </div>
+                <span class="px-3 py-1 rounded-full text-xs font-bold {% if user.plan == 'pro' %}bg-gradient-to-r from-amber-500 to-orange-500 text-white{% else %}bg-slate-200 text-slate-700{% endif %} uppercase tracking-wider">
+                    Paket {{ user.plan.upper() }}
+                </span>
+            </div>
+
+            <!-- Plan Comparison Cards -->
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-5 mt-6">
+                <!-- Starter -->
+                <div class="p-5 rounded-2xl border {% if user.plan == 'starter' %}border-orange-500 bg-orange-50/20{% else %}border-slate-200 bg-white{% endif %} flex flex-col justify-between">
+                    <div>
+                        <span class="text-xs font-bold text-slate-400 uppercase tracking-wider">Paket Dasar</span>
+                        <h4 class="text-lg font-black text-slate-900 mt-1">Starter</h4>
+                        <div class="text-2xl font-black text-slate-900 mt-2">Rp 49.000<span class="text-xs text-slate-400 font-normal"> / bulan</span></div>
+                        <ul class="mt-4 space-y-2 text-xs text-slate-600">
+                            <li>✓ Catat transaksi via teks Telegram</li>
+                            <li>✓ Dashboard web lengkap</li>
+                            <li>✓ Maksimal 50 transaksi / bulan</li>
+                            <li>✓ Maksimal 3 dompet & 5 budget</li>
+                            <li class="text-slate-400">✕ Tidak ada input foto struk AI</li>
+                            <li class="text-slate-400">✕ Tidak ada AI Financial Advisor</li>
+                            <li class="text-slate-400">✕ Tidak ada export PDF/Excel</li>
+                        </ul>
+                    </div>
+                </div>
+
+                <!-- Pro -->
+                <div class="p-5 rounded-2xl border-2 border-orange-500 bg-gradient-to-b from-orange-50/40 to-white flex flex-col justify-between relative shadow-lg shadow-orange-500/10">
+                    <span class="absolute -top-3 right-4 px-2.5 py-0.5 rounded-full text-[10px] font-black bg-orange-500 text-white uppercase tracking-wider">
+                        Paling Populer
+                    </span>
+                    <div>
+                        <span class="text-xs font-bold text-orange-600 uppercase tracking-wider">Akses Seumur Hidup</span>
+                        <h4 class="text-lg font-black text-slate-900 mt-1">Pro</h4>
+                        <div class="text-2xl font-black text-orange-600 mt-2">Rp 99.000<span class="text-xs text-slate-400 font-normal"> Sekali Bayar</span></div>
+                        <ul class="mt-4 space-y-2 text-xs text-slate-700 font-medium">
+                            <li>✓ <b>Unlimited</b> transaksi per bulan</li>
+                            <li>✓ <b>Unlimited</b> dompet & budget kategori</li>
+                            <li>✓ <b>Input via Foto Struk AI OCR</b></li>
+                            <li>✓ <b>AI Financial Advisor</b> otomatis</li>
+                            <li>✓ <b>Export Unlimited ke PDF & Excel</b></li>
+                            <li>✓ Voice Note STT tanpa batas</li>
+                            <li>✓ Prioritas support 24/7</li>
+                        </ul>
+                    </div>
+                    {% if user.plan != 'pro' %}
+                    <button onclick="handleUpgrade('pro')" class="btn-primary w-full py-2.5 rounded-xl text-xs font-bold mt-5">
+                        Upgrade ke Pro Sekarang (Rp 99.000)
+                    </button>
+                    {% else %}
+                    <div class="mt-5 py-2 rounded-xl text-center text-xs font-bold bg-emerald-100 text-emerald-800">
+                        ✓ Anda sudah menikmati TataDana Pro
+                    </div>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+{{ super() }}
+<script>
+    function switchTab(tab) {
+        ['profile', 'telegram', 'reminder', 'plan'].forEach(t => {
+            const btn = document.getElementById(`tab-btn-${t}`);
+            const content = document.getElementById(`tab-content-${t}`);
+            if (btn && content) {
+                if (t === tab) {
+                    btn.className = "pb-3 border-b-2 border-orange-500 text-orange-600 flex items-center gap-2 whitespace-nowrap font-bold";
+                    content.classList.remove("hidden");
+                } else {
+                    btn.className = "pb-3 border-b-2 border-transparent text-slate-500 hover:text-slate-800 flex items-center gap-2 whitespace-nowrap font-medium";
+                    content.classList.add("hidden");
+                }
+            }
+        });
+    }
+
+    let countdownInterval = null;
+    let currentPairingToken = "";
+
+    async function checkBotStatus() {
+        const badge = document.getElementById("tg-user-link-badge");
+        const linkedBox = document.getElementById("tg-linked-container");
+        const unlinkedBox = document.getElementById("tg-unlinked-container");
+        const detailText = document.getElementById("tg-linked-detail");
+        const dateText = document.getElementById("tg-linked-date");
+
+        try {
+            const res = await apiCall("/api/telegram/status");
+            const d = res.data;
+
+            if (d.is_user_linked && d.user_link) {
+                if (badge) badge.innerHTML = `<span class="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-bold bg-emerald-100 text-emerald-800">🟢 Terhubung</span>`;
+                if (linkedBox) linkedBox.classList.remove("hidden");
+                if (unlinkedBox) unlinkedBox.classList.add("hidden");
+                if (detailText) detailText.innerText = `Username: @${d.user_link.telegram_username || 'Pengguna'} | ID: ${d.user_link.telegram_user_id}`;
+                if (dateText) dateText.innerText = `Terhubung sejak: ${d.user_link.linked_at || '-'}`;
+            } else {
+                if (badge) badge.innerHTML = `<span class="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-bold bg-amber-100 text-amber-800">🟡 Belum Ditautkan</span>`;
+                if (linkedBox) linkedBox.classList.add("hidden");
+                if (unlinkedBox) unlinkedBox.classList.remove("hidden");
+            }
+
+            if (document.getElementById("tg-bot-username")) {
+                document.getElementById("tg-bot-username").innerText = `@${d.bot_username || 'TataDanaBot'}`;
+            }
+            if (document.getElementById("tg-webhook-url")) {
+                document.getElementById("tg-webhook-url").innerText = d.webhook_url || '-';
+            }
+        } catch (e) {
+            if (badge) badge.innerHTML = `<span class="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-bold bg-slate-100 text-slate-600">Offline</span>`;
+        }
+    }
+
+    async function handleGeneratePairingCode() {
+        const btn = document.getElementById("btn-gen-code");
+        if (btn) {
+            btn.disabled = true;
+            btn.innerHTML = `<span>⏳ Membuat kode...</span>`;
+        }
+
+        try {
+            const res = await apiCall("/api/telegram/generate-pairing-code", { method: "POST" });
+            const data = res.data;
+            currentPairingToken = data.token;
+
+            document.getElementById("pairing-code-result").classList.remove("hidden");
+            document.getElementById("pairing-token-display").innerText = data.token;
+            document.getElementById("btn-deep-link").href = data.deep_link;
+            document.getElementById("pairing-bot-name").innerText = `@${data.bot_username}`;
+            document.getElementById("pairing-command-preview").innerText = `/start ${data.token}`;
+
+            startCountdown(data.expires_in_seconds || 600);
+            showToast("Kode penautan berhasil dibuat! Berlaku selama 10 menit.", "success");
+        } catch (err) {
+            showToast(err.message, "error");
+        } finally {
+            if (btn) {
+                btn.disabled = false;
+                btn.innerHTML = `<i data-lucide="key" class="w-4 h-4"></i><span>Buat Kode Penautan Baru</span>`;
+                if (window.lucide) window.lucide.createIcons();
+            }
+        }
+    }
+
+    function startCountdown(seconds) {
+        if (countdownInterval) clearInterval(countdownInterval);
+        let remaining = seconds;
+        const timerEl = document.getElementById("timer-countdown");
+
+        countdownInterval = setInterval(() => {
+            remaining--;
+            if (remaining <= 0) {
+                clearInterval(countdownInterval);
+                if (timerEl) {
+                    timerEl.innerText = "Kadaluwarsa";
+                    timerEl.classList.remove("text-orange-600");
+                    timerEl.classList.add("text-red-600");
+                }
+                showToast("Kode penautan telah kadaluwarsa. Silakan buat kode baru.", "warning");
+                return;
+            }
+
+            const mins = Math.floor(remaining / 60);
+            const secs = remaining % 60;
+            if (timerEl) {
+                timerEl.innerText = `${mins.toString().padStart(2, '0')}:${secs.toString().padStart(2, '0')}`;
+            }
+        }, 1000);
+    }
+
+    function copyPairingToken() {
+        if (!currentPairingToken) return;
+        navigator.clipboard.writeText(currentPairingToken).then(() => {
+            const copyBtnText = document.getElementById("copy-btn-text");
+            if (copyBtnText) copyBtnText.innerText = "Tersalin! ✓";
+            showToast("Kode penautan berhasil disalin ke clipboard!", "info");
+            setTimeout(() => {
+                if (copyBtnText) copyBtnText.innerText = "Salin Kode";
+            }, 2000);
+        });
+    }
+
+    async function handleUnlinkTelegram() {
+        if (!confirm("Apakah Anda yakin ingin memutuskan tautan bot Telegram? Anda tidak dapat lagi mencatat transaksi via chat sebelum menautkannya kembali.")) {
+            return;
+        }
+
+        try {
+            await apiCall("/api/telegram/unlink", { method: "POST" });
+            showToast("Tautan Telegram berhasil diputuskan.", "success");
+            checkBotStatus();
+        } catch (err) {
+            showToast(err.message, "error");
+        }
+    }
+
+    async function handleTestConnection(e) {
+        e.preventDefault();
+        const tokenInput = document.getElementById("tg-token-input");
+        if (!tokenInput) return;
+        const token = tokenInput.value.trim();
+        const btn = document.getElementById("btn-test-connection");
+        const statusText = document.getElementById("test-connection-status-text");
+
+        if (!token) {
+            showToast("Masukkan token Telegram Bot Anda terlebih dahulu.", "warning");
+            return;
+        }
+
+        btn.disabled = true;
+        btn.innerHTML = `<span>⏳ Menguji...</span>`;
+        if (statusText) statusText.innerText = "Memverifikasi token ke Telegram API & mendaftarkan webhook...";
+
+        try {
+            const res = await apiCall("/api/telegram/test-connection", {
+                method: "POST",
+                body: JSON.stringify({ token })
+            });
+
+            showToast("Bot Telegram berhasil terhubung!", "success");
+            if (statusText) statusText.innerText = `Sukses! Terhubung ke @${res.bot_username}`;
+            checkBotStatus();
+        } catch (err) {
+            if (statusText) statusText.innerText = err.message;
+            showToast(err.message, "error");
+        } finally {
+            btn.disabled = false;
+            btn.innerHTML = `<i data-lucide="refresh-cw" class="w-3.5 h-3.5"></i><span>Simpan & Daftarkan Webhook</span>`;
+            if (window.lucide) window.lucide.createIcons();
+        }
+    }
+
+    async function sendSimMessage() {
+        const input = document.getElementById("sim-input");
+        const val = input.value.trim();
+        if (!val) return;
+
+        const box = document.getElementById("sim-chat-box");
+        box.innerHTML += `<div class="bg-orange-500/20 text-orange-200 p-2.5 rounded-xl ml-auto max-w-[85%] text-right font-medium">${val}</div>`;
+        input.value = "";
+        box.scrollTop = box.scrollHeight;
+
+        try {
+            const res = await apiCall("/api/telegram/simulate-chat", {
+                method: "POST",
+                body: JSON.stringify({ message: val, type: "text" })
+            });
+            box.innerHTML += `<div class="bg-slate-800 p-3 rounded-xl max-w-[85%] text-slate-200">✓ Transaksi tercatat via bot! Silakan cek menu Laporan atau Beranda.</div>`;
+            box.scrollTop = box.scrollHeight;
+        } catch (err) {
+            box.innerHTML += `<div class="bg-red-900/40 text-red-300 p-2.5 rounded-xl max-w-[85%]">Error: ${err.message}</div>`;
+        }
+    }
+
+    function toggleFrequencyTimes() {
+        const freq = document.getElementById("rem-frequency").value;
+        const t2 = document.getElementById("rem-time-2-container");
+        if (freq === "2") {
+            t2.classList.remove("hidden");
+        } else {
+            t2.classList.add("hidden");
+        }
+    }
+
+    async function handleUpdateReminder(e) {
+        e.preventDefault();
+        const is_active = document.getElementById("rem-is-active").checked;
+        const frequency = parseInt(document.getElementById("rem-frequency").value);
+        const time_1 = document.getElementById("rem-time-1").value;
+        const time_2 = document.getElementById("rem-time-2").value;
+
+        try {
+            await apiCall("/api/settings/reminder", {
+                method: "PUT",
+                body: JSON.stringify({ is_active, frequency, time_1, time_2 })
+            });
+            showToast("Pengaturan reminder berhasil disimpan!", "success");
+        } catch (err) {
+            showToast(err.message, "error");
+        }
+    }
+
+    async function handleUpdateProfile(e) {
+        e.preventDefault();
+        const full_name = document.getElementById("prof-name").value;
+        try {
+            await apiCall("/api/settings/profile", {
+                method: "PUT",
+                body: JSON.stringify({ full_name })
+            });
+            showToast("Profil berhasil diperbarui!", "success");
+        } catch (err) {
+            showToast(err.message, "error");
+        }
+    }
+
+    async function handleUpgrade(plan) {
+        try {
+            const res = await apiCall("/api/payments/create-order", {
+                method: "POST",
+                body: JSON.stringify({ plan, payment_type: "midtrans" })
+            });
+            showToast("Order upgrade dibuat. Mengarahkan ke pembayaran Midtrans...", "info");
+            setTimeout(() => {
+                alert(`[DEMO MIDTRANS PAYMENT]\nOrder ID: ${res.data.order_id}\nTotal: Rp ${res.data.amount.toLocaleString('id-ID')}\n\nPembayaran dapat langsung di-approve oleh Admin di Admin Panel.`);
+            }, 500);
+        } catch (err) {
+            showToast(err.message, "error");
+        }
+    }
+
+    document.addEventListener("DOMContentLoaded", () => {
+        checkBotStatus();
+        const urlParams = new URLSearchParams(window.location.search);
+        const tab = urlParams.get("tab");
+        if (tab) switchTab(tab);
+    });
+</script>
+{% endblock %}

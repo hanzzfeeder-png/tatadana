@@ -1,0 +1,107 @@
+{% extends "dashboard/layout.html" %}
+
+{% block page_title %}Daftar Transaksi{% endblock %}
+{% block page_subtitle %}Riwayat pencatatan uang masuk dan keluar secara komprehensif{% endblock %}
+
+{% block content %}
+<div class="space-y-6">
+    <!-- Top Bar -->
+    <div class="card-premium p-5 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+        <div class="relative flex-1 max-w-md">
+            <i data-lucide="search" class="w-4 h-4 text-slate-400 absolute left-3.5 top-3"></i>
+            <input type="text" id="tx-search-input" placeholder="Cari berdasarkan catatan transaksi..." oninput="handleSearch(event)" class="input-orange w-full pl-10 pr-4 py-2 text-xs rounded-xl border border-slate-200 bg-white">
+        </div>
+        <button onclick="openModal('add-tx-modal')" class="btn-primary px-4 py-2 rounded-xl text-xs font-bold flex items-center gap-2">
+            <i data-lucide="plus" class="w-4 h-4"></i>
+            <span>Catat Transaksi Baru</span>
+        </button>
+    </div>
+
+    <!-- Transactions List -->
+    <div class="card-premium overflow-hidden">
+        <div class="overflow-x-auto">
+            <table class="w-full text-left text-xs">
+                <thead>
+                    <tr class="bg-slate-50/70 border-b border-slate-200 text-slate-500 uppercase font-bold tracking-wider">
+                        <th class="py-3 px-4">Tanggal (WIB)</th>
+                        <th class="py-3 px-4">Kategori</th>
+                        <th class="py-3 px-4">Dompet</th>
+                        <th class="py-3 px-4">Sumber</th>
+                        <th class="py-3 px-4">Catatan</th>
+                        <th class="py-3 px-4 text-right">Nominal</th>
+                    </tr>
+                </thead>
+                <tbody id="all-tx-table-body" class="divide-y divide-slate-100 font-medium">
+                    <tr><td colspan="6" class="py-8 text-center text-slate-400">Memuat transaksi...</td></tr>
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+{{ super() }}
+<script>
+    let allTransactions = [];
+
+    async function loadTransactions() {
+        try {
+            const res = await apiCall("/api/transactions?limit=100");
+            allTransactions = res.data || [];
+            renderTxTable(allTransactions);
+        } catch (e) {
+            document.getElementById("all-tx-table-body").innerHTML = `<tr><td colspan="6" class="py-8 text-center text-red-500">Gagal memuat transaksi: ${e.message}</td></tr>`;
+        }
+    }
+
+    function renderTxTable(txs) {
+        const tbody = document.getElementById("all-tx-table-body");
+        if (!txs || txs.length === 0) {
+            tbody.innerHTML = `<tr><td colspan="6" class="py-8 text-center text-slate-400">Belum ada transaksi yang sesuai.</td></tr>`;
+            return;
+        }
+
+        const sourceBadges = {
+            web: `<span class="inline-flex items-center px-1.5 py-0.5 rounded text-[10px] bg-slate-100 text-slate-600">Web</span>`,
+            telegram_text: `<span class="inline-flex items-center px-1.5 py-0.5 rounded text-[10px] bg-sky-100 text-sky-700">TG Teks</span>`,
+            telegram_photo: `<span class="inline-flex items-center px-1.5 py-0.5 rounded text-[10px] bg-purple-100 text-purple-700">TG Struk</span>`,
+            telegram_voice: `<span class="inline-flex items-center px-1.5 py-0.5 rounded text-[10px] bg-amber-100 text-amber-700">TG Voice</span>`
+        };
+
+        tbody.innerHTML = txs.map(t => {
+            const isInc = t.type === 'income';
+            const isTrf = t.type === 'transfer';
+            const sign = isInc ? "+" : (isTrf ? "" : "-");
+            const colorClass = isInc ? "text-emerald-600" : (isTrf ? "text-blue-600" : "text-slate-900");
+
+            return `
+            <tr class="hover:bg-slate-50/70 transition-colors">
+                <td class="py-3 px-4 text-slate-500">${t.transaction_date.slice(0, 16)}</td>
+                <td class="py-3 px-4 font-semibold text-slate-800">${t.category_icon || '🏷️'} ${t.category_name || (isTrf ? 'Transfer' : '-')}</td>
+                <td class="py-3 px-4 text-slate-600">${t.wallet_name || '-'}</td>
+                <td class="py-3 px-4">${sourceBadges[t.source] || sourceBadges.web}</td>
+                <td class="py-3 px-4 text-slate-600">${t.note || '-'}</td>
+                <td class="py-3 px-4 text-right font-bold ${colorClass}">${sign}${formatIDR(t.amount)}</td>
+            </tr>
+            `;
+        }).join('');
+    }
+
+    function handleSearch(e) {
+        const query = e.target.value.toLowerCase().trim();
+        if (!query) {
+            renderTxTable(allTransactions);
+            return;
+        }
+        const filtered = allTransactions.filter(t => (t.note || "").toLowerCase().includes(query) || (t.category_name || "").toLowerCase().includes(query));
+        renderTxTable(filtered);
+    }
+
+    window.refreshPageData = loadTransactions;
+
+    document.addEventListener("DOMContentLoaded", () => {
+        loadTransactions();
+    });
+</script>
+{% endblock %}

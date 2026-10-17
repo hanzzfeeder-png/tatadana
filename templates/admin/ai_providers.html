@@ -1,0 +1,257 @@
+{% extends "admin/layout.html" %}
+
+{% block admin_title %}Manajemen AI & Multi-Provider{% endblock %}
+{% block admin_subtitle %}Konfigurasi Google Gemini, OpenAI, DeepSeek, prioritas failover, dan mode paralel{% endblock %}
+
+{% block admin_content %}
+<div class="space-y-6">
+    <!-- Header Card: Info Mode & Tambah Provider -->
+    <div class="p-6 rounded-2xl bg-white border border-slate-200 shadow-sm flex flex-col md:flex-row md:items-center justify-between gap-4">
+        <div>
+            <div class="flex items-center gap-2">
+                <span class="w-2.5 h-2.5 rounded-full bg-orange-500 animate-pulse"></span>
+                <h3 class="font-bold text-sm text-slate-900">Arsitektur Multi-Provider AI (High Availability)</h3>
+            </div>
+            <p class="text-xs text-slate-500 mt-1 max-w-2xl">
+                TataDana mendukung failover otomatis antar LLM (Gemini, OpenAI, DeepSeek). Jika provider prioritas utama mengalami limit kuota atau timeout, sistem akan otomatis beralih ke provider berikutnya tanpa mengganggu pengguna.
+            </p>
+        </div>
+        <div class="flex items-center gap-2">
+            <button onclick="openModal('add-provider-modal')" class="px-4 py-2.5 rounded-xl text-xs font-bold bg-orange-500 hover:bg-orange-600 text-white flex items-center gap-2 shadow-md shadow-orange-500/20 transition-all">
+                <i data-lucide="plus" class="w-4 h-4"></i>
+                <span>Tambah Provider Baru</span>
+            </button>
+        </div>
+    </div>
+
+    <!-- Providers Table Card -->
+    <div class="rounded-2xl bg-white border border-slate-200 shadow-sm overflow-hidden">
+        <div class="p-5 border-b border-slate-100 flex items-center justify-between bg-slate-50/50">
+            <div>
+                <h4 class="font-bold text-sm text-slate-900">Daftar Provider AI Terdaftar</h4>
+                <p class="text-xs text-slate-500">API key disimpan terenkripsi dengan algoritma Fernet di database</p>
+            </div>
+            <button onclick="loadAIProviders()" class="p-2 rounded-xl text-slate-500 hover:bg-slate-100 text-xs flex items-center gap-1.5 transition-colors" title="Muat ulang">
+                <i data-lucide="refresh-cw" class="w-3.5 h-3.5"></i>
+                <span>Refresh</span>
+            </button>
+        </div>
+
+        <div class="overflow-x-auto">
+            <table class="w-full text-left text-xs">
+                <thead>
+                    <tr class="border-b border-slate-100 text-slate-400 uppercase font-semibold bg-white">
+                        <th class="py-3 px-4">Prioritas</th>
+                        <th class="py-3 px-4">Nama Provider</th>
+                        <th class="py-3 px-4">Tipe & Model</th>
+                        <th class="py-3 px-4">API Key Masked</th>
+                        <th class="py-3 px-4">Status</th>
+                        <th class="py-3 px-4">Mode Eksekusi</th>
+                        <th class="py-3 px-4 text-right">Aksi</th>
+                    </tr>
+                </thead>
+                <tbody id="providers-table-body" class="divide-y divide-slate-100 font-medium text-slate-700">
+                    <tr><td colspan="7" class="py-8 text-center text-slate-400">Memuat data provider AI...</td></tr>
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+
+<!-- Modal: Tambah AI Provider -->
+<div id="add-provider-modal" class="fixed inset-0 bg-slate-900/40 backdrop-blur-sm z-50 hidden items-center justify-center p-4">
+    <div class="bg-white border border-slate-200 rounded-2xl max-w-lg w-full p-6 shadow-2xl relative text-slate-800">
+        <button onclick="closeModal('add-provider-modal')" class="absolute top-5 right-5 text-slate-400 hover:text-slate-600 text-xl font-bold">&times;</button>
+        
+        <div class="flex items-center gap-2 mb-1">
+            <span class="p-1.5 rounded-lg bg-orange-100 text-orange-600">
+                <i data-lucide="cpu" class="w-4 h-4"></i>
+            </span>
+            <h3 class="text-base font-bold text-slate-900">Tambah Provider AI</h3>
+        </div>
+        <p class="text-xs text-slate-500 mb-5">Daftarkan API key provider baru untuk pemrosesan NLP Telegram, OCR Struk, atau Audio Voice Note.</p>
+
+        <form id="add-provider-form" onsubmit="handleCreateProvider(event)" class="space-y-4 text-xs">
+            <div>
+                <label class="block font-semibold text-slate-700 mb-1">Nama Provider / Label</label>
+                <input type="text" id="prov-name" required placeholder="Contoh: Google Gemini 1.5 Flash" class="w-full px-3.5 py-2.5 rounded-xl border border-slate-200 bg-white text-slate-800 focus:outline-none focus:border-orange-500 focus:ring-1 focus:ring-orange-500">
+            </div>
+
+            <div class="grid grid-cols-2 gap-3">
+                <div>
+                    <label class="block font-semibold text-slate-700 mb-1">Tipe Provider</label>
+                    <select id="prov-type" class="w-full px-3.5 py-2.5 rounded-xl border border-slate-200 bg-white text-slate-800 focus:outline-none focus:border-orange-500">
+                        <option value="gemini">Google Gemini</option>
+                        <option value="openai">OpenAI</option>
+                        <option value="deepseek">DeepSeek</option>
+                    </select>
+                </div>
+                <div>
+                    <label class="block font-semibold text-slate-700 mb-1">Nama Model</label>
+                    <input type="text" id="prov-model" required placeholder="gemini-1.5-flash" class="w-full px-3.5 py-2.5 rounded-xl border border-slate-200 bg-white text-slate-800 focus:outline-none focus:border-orange-500">
+                </div>
+            </div>
+
+            <div>
+                <label class="block font-semibold text-slate-700 mb-1">API Key</label>
+                <div class="relative">
+                    <input type="password" id="prov-key" required placeholder="sk-... atau AIzaSy..." class="w-full px-3.5 py-2.5 pr-10 rounded-xl border border-slate-200 bg-white text-slate-800 font-mono text-xs focus:outline-none focus:border-orange-500 focus:ring-1 focus:ring-orange-500">
+                    <button type="button" onclick="togglePasswordVisibility('prov-key', 'eye-icon-1')" class="absolute inset-y-0 right-0 pr-3 flex items-center text-slate-400 hover:text-slate-600">
+                        <i id="eye-icon-1" data-lucide="eye" class="w-4 h-4"></i>
+                    </button>
+                </div>
+                <span class="text-[11px] text-slate-400 mt-1 block">🔒 Kunci API akan dienkripsi menggunakan enkripsi simetris Fernet sebelum disimpan.</span>
+            </div>
+
+            <div class="grid grid-cols-2 gap-3">
+                <div>
+                    <label class="block font-semibold text-slate-700 mb-1">Prioritas (1 = Tertinggi)</label>
+                    <input type="number" id="prov-priority" value="1" min="1" max="99" class="w-full px-3.5 py-2.5 rounded-xl border border-slate-200 bg-white text-slate-800 focus:outline-none focus:border-orange-500">
+                </div>
+                <div>
+                    <label class="block font-semibold text-slate-700 mb-1">Mode Eksekusi</label>
+                    <select id="prov-mode" class="w-full px-3.5 py-2.5 rounded-xl border border-slate-200 bg-white text-slate-800 focus:outline-none focus:border-orange-500">
+                        <option value="single">Single Provider</option>
+                        <option value="parallel_failover">Paralel (Failover)</option>
+                    </select>
+                </div>
+            </div>
+
+            <div class="pt-2 flex items-center justify-end gap-2">
+                <button type="button" onclick="closeModal('add-provider-modal')" class="px-4 py-2.5 rounded-xl text-xs font-semibold text-slate-600 hover:bg-slate-100">
+                    Batal
+                </button>
+                <button type="submit" class="px-5 py-2.5 rounded-xl text-xs font-bold bg-orange-500 hover:bg-orange-600 text-white shadow-md shadow-orange-500/20 transition-all">
+                    Simpan Provider
+                </button>
+            </div>
+        </form>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+{{ super() }}
+<script>
+    function togglePasswordVisibility(inputId, iconId) {
+        const input = document.getElementById(inputId);
+        const icon = document.getElementById(iconId);
+        if (input.type === "password") {
+            input.type = "text";
+            icon.setAttribute("data-lucide", "eye-off");
+        } else {
+            input.type = "password";
+            icon.setAttribute("data-lucide", "eye");
+        }
+        if (window.lucide) window.lucide.createIcons();
+    }
+
+    async function loadAIProviders() {
+        const tbody = document.getElementById("providers-table-body");
+        try {
+            const res = await apiCall("/api/admin/ai-providers");
+            const list = res.data || [];
+
+            if (list.length === 0) {
+                tbody.innerHTML = `<tr><td colspan="7" class="py-8 text-center text-slate-400">Belum ada provider AI yang dikonfigurasi. Silakan tambah provider baru di atas.</td></tr>`;
+                return;
+            }
+
+            tbody.innerHTML = list.map(p => `
+                <tr class="hover:bg-slate-50/70 transition-colors">
+                    <td class="py-3.5 px-4 font-bold text-orange-600">#${p.priority}</td>
+                    <td class="py-3.5 px-4">
+                        <div class="font-bold text-slate-900">${p.name}</div>
+                        <div class="text-[10px] text-slate-400 font-mono">ID: ${p.id.slice(0, 8)}...</div>
+                    </td>
+                    <td class="py-3.5 px-4 text-slate-600">
+                        <span class="uppercase font-mono text-[10px] px-2 py-0.5 rounded font-bold ${getProviderBadgeColor(p.provider_type)} mr-1">${p.provider_type}</span>
+                        <span class="font-mono text-slate-700">${p.model_name}</span>
+                    </td>
+                    <td class="py-3.5 px-4 font-mono text-slate-500">
+                        ${p.api_key_masked || '••••••••'}
+                    </td>
+                    <td class="py-3.5 px-4">
+                        <button onclick="handleToggleActive('${p.id}', ${!p.is_active})" class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[10px] font-bold ${p.is_active ? 'bg-emerald-50 text-emerald-700 border border-emerald-200' : 'bg-rose-50 text-rose-700 border border-rose-200'}">
+                            <span class="w-1.5 h-1.5 rounded-full ${p.is_active ? 'bg-emerald-500' : 'bg-rose-500'}"></span>
+                            ${p.is_active ? 'Aktif' : 'Nonaktif'}
+                        </button>
+                    </td>
+                    <td class="py-3.5 px-4">
+                        <span class="px-2 py-0.5 rounded text-[10px] font-bold ${p.mode === 'parallel_failover' || p.mode === 'parallel' ? 'bg-purple-50 text-purple-700 border border-purple-200' : 'bg-slate-100 text-slate-600'}">
+                            ${p.mode === 'parallel_failover' || p.mode === 'parallel' ? 'Failover Paralel' : 'Single Provider'}
+                        </span>
+                    </td>
+                    <td class="py-3.5 px-4 text-right">
+                        <button onclick="handleDeleteProvider('${p.id}', '${p.name}')" class="px-2.5 py-1 rounded-lg text-xs font-semibold text-rose-600 hover:bg-rose-50 transition-colors">
+                            Hapus
+                        </button>
+                    </td>
+                </tr>
+            `).join('');
+
+            if (window.lucide) window.lucide.createIcons();
+        } catch (e) {
+            tbody.innerHTML = `<tr><td colspan="7" class="py-8 text-center text-rose-500">Gagal memuat provider: ${e.message}</td></tr>`;
+        }
+    }
+
+    function getProviderBadgeColor(type) {
+        if (type === 'gemini') return 'bg-blue-50 text-blue-700 border border-blue-200';
+        if (type === 'openai') return 'bg-emerald-50 text-emerald-700 border border-emerald-200';
+        if (type === 'deepseek') return 'bg-purple-50 text-purple-700 border border-purple-200';
+        return 'bg-slate-100 text-slate-700';
+    }
+
+    async function handleCreateProvider(e) {
+        e.preventDefault();
+        const name = document.getElementById("prov-name").value;
+        const provider_type = document.getElementById("prov-type").value;
+        const model_name = document.getElementById("prov-model").value;
+        const api_key = document.getElementById("prov-key").value;
+        const priority = parseInt(document.getElementById("prov-priority").value);
+        const mode = document.getElementById("prov-mode").value;
+
+        try {
+            await apiCall("/api/admin/ai-providers", {
+                method: "POST",
+                body: JSON.stringify({ name, provider_type, model_name, api_key, priority, mode, is_active: true })
+            });
+            showToast("Provider AI berhasil ditambahkan!", "success");
+            closeModal("add-provider-modal");
+            document.getElementById("add-provider-form").reset();
+            loadAIProviders();
+        } catch (err) {
+            showToast(err.message, "error");
+        }
+    }
+
+    async function handleToggleActive(id, newStatus) {
+        try {
+            await apiCall(`/api/admin/ai-providers/${id}`, {
+                method: "PUT",
+                body: JSON.stringify({ is_active: newStatus })
+            });
+            showToast(`Status provider berhasil ${newStatus ? 'diaktifkan' : 'dinonaktifkan'}`, "success");
+            loadAIProviders();
+        } catch (err) {
+            showToast(err.message, "error");
+        }
+    }
+
+    async function handleDeleteProvider(id, name) {
+        if (!confirm(`Hapus provider AI "${name}"?`)) return;
+        try {
+            await apiCall(`/api/admin/ai-providers/${id}`, { method: "DELETE" });
+            showToast("Provider berhasil dihapus", "success");
+            loadAIProviders();
+        } catch (err) {
+            showToast(err.message, "error");
+        }
+    }
+
+    document.addEventListener("DOMContentLoaded", () => {
+        loadAIProviders();
+    });
+</script>
+{% endblock %}

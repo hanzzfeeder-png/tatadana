@@ -1,0 +1,461 @@
+{% extends "base.html" %}
+
+{% block title %}Daftar Akun Baru — TataDana{% endblock %}
+
+{% block body %}
+<div class="min-h-screen flex flex-col md:flex-row bg-[#F8FAFC]">
+    <!-- Sisi Kiri (40%): Branding Panel Elegan & Ilustrasi (Hidden di Mobile) -->
+    <div class="hidden md:flex md:w-[40%] bg-gradient-to-br from-orange-600 via-orange-500 to-amber-500 text-white p-10 lg:p-14 flex-col justify-between relative overflow-hidden shrink-0">
+        <!-- Glow Orbs Ambient -->
+        <div class="absolute -top-24 -left-24 w-96 h-96 rounded-full bg-white/10 blur-3xl pointer-events-none"></div>
+        <div class="absolute -bottom-24 -right-24 w-96 h-96 rounded-full bg-orange-950/25 blur-3xl pointer-events-none"></div>
+
+        <!-- Top Brand Header -->
+        <div class="relative z-10">
+            <a href="/" class="flex items-center gap-3 group">
+                <div class="w-10 h-10 rounded-xl bg-white text-orange-600 flex items-center justify-center font-black text-xl shadow-lg shadow-orange-950/15 group-hover:scale-105 transition-transform">
+                    T
+                </div>
+                <div>
+                    <span class="font-extrabold text-2xl tracking-tight text-white block leading-none">Tata<span class="text-amber-200">Dana</span></span>
+                    <span class="text-[10px] font-bold text-orange-100 uppercase tracking-widest">Smart FinTech</span>
+                </div>
+            </a>
+
+            <!-- Tagline & Narrative -->
+            <div class="mt-14">
+                <span class="inline-block px-3.5 py-1 rounded-full text-xs font-bold bg-white/20 text-white backdrop-blur-sm mb-4 border border-white/20">
+                    🚀 Onboarding FinTech Otomatis
+                </span>
+                <h1 class="text-3xl lg:text-4xl font-black leading-tight tracking-tight">
+                    Keuanganmu.<br>Terkontrol.
+                </h1>
+                <p class="text-orange-100 text-xs sm:text-sm mt-3 leading-relaxed max-w-sm">
+                    Mulai hidup finansial bebas cemas. AI kami otomatis menyiapkan dompet dan kategori anggaran yang pas untuk gaya hidupmu.
+                </p>
+            </div>
+        </div>
+
+        <!-- Minimalist Expense Summary Illustration (Glassmorphism Card) -->
+        <div class="relative z-10 my-8 p-5 rounded-2xl bg-white/15 backdrop-blur-md border border-white/25 shadow-xl text-white">
+            <div class="flex items-center justify-between pb-3 border-b border-white/20 text-xs">
+                <span class="font-semibold text-orange-100">Alokasi Budget Pintar</span>
+                <span class="px-2 py-0.5 rounded-full text-[10px] font-bold bg-amber-400/25 text-amber-100 border border-amber-400/30">
+                    AI Guided
+                </span>
+            </div>
+            <div class="mt-3">
+                <div class="text-[11px] text-orange-200">Rekomendasi Budget Awal</div>
+                <div class="text-2xl font-black text-white mt-0.5">Rp 3.050.000</div>
+            </div>
+            <div class="mt-4 space-y-2 text-[11px]">
+                <div class="flex justify-between items-center text-orange-100">
+                    <span>🍜 Makanan & Minuman</span>
+                    <span class="font-mono font-bold">Rp 1.500.000</span>
+                </div>
+                <div class="w-full bg-black/20 rounded-full h-1.5 overflow-hidden">
+                    <div class="bg-amber-300 h-1.5 rounded-full" style="width: 50%"></div>
+                </div>
+                <div class="flex justify-between items-center text-orange-100 pt-1">
+                    <span>🏠 Tagihan & Utilitas</span>
+                    <span class="font-mono font-bold">Rp 750.000</span>
+                </div>
+                <div class="w-full bg-black/20 rounded-full h-1.5 overflow-hidden">
+                    <div class="bg-rose-300 h-1.5 rounded-full" style="width: 25%"></div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Footer Copyright -->
+        <div class="relative z-10 text-[11px] text-orange-100 flex items-center justify-between">
+            <span>&copy; 2026 TataDana Indonesia.</span>
+            <span>Didukung Supabase & Midtrans</span>
+        </div>
+    </div>
+
+    <!-- Sisi Kanan (60%): Wizard Form Bersih & Focus-Ring Oranye (#F97316) -->
+    <div class="flex-1 flex items-center justify-center p-6 md:p-10 lg:p-16">
+        <div class="max-w-md w-full bg-white p-8 md:p-10 rounded-3xl shadow-sm border border-slate-200/80 relative">
+            <!-- Mobile Brand Logo -->
+            <div class="md:hidden flex items-center gap-2.5 mb-6">
+                <div class="w-9 h-9 rounded-xl bg-orange-500 text-white flex items-center justify-center font-black text-lg shadow-md shadow-orange-500/20">
+                    T
+                </div>
+                <span class="font-extrabold text-xl text-slate-900">Tata<span class="text-orange-500">Dana</span></span>
+            </div>
+
+            <!-- =============================================================
+                 STEP 1: REGISTRASI AKUN
+                 ============================================================= -->
+            <div id="register-step-1">
+                <div class="mb-5">
+                    <h2 class="text-2xl font-black text-slate-900 tracking-tight">Buat Akun TataDana</h2>
+                    <p class="text-xs text-slate-500 mt-1">Daftar sekarang untuk mulai mencatat keuangan via Telegram.</p>
+                </div>
+
+                <!-- Google OAuth Button -->
+                <button type="button" onclick="handleGoogleOAuthMock()" class="w-full py-2.5 px-4 rounded-xl border border-slate-200 bg-white hover:bg-slate-50 text-slate-700 text-xs font-bold flex items-center justify-center gap-3 transition-colors shadow-sm">
+                    <svg class="w-4 h-4" viewBox="0 0 24 24">
+                        <path fill="#4285F4" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"/>
+                        <path fill="#34A853" d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z"/>
+                        <path fill="#FBBC05" d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.06H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.94l2.85-2.22.81-.63z"/>
+                        <path fill="#EA4335" d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.06l3.66 2.84c.87-2.6 3.3-4.52 6.16-4.52z"/>
+                    </svg>
+                    <span>Daftar dengan Google</span>
+                </button>
+
+                <!-- Divider -->
+                <div class="relative my-5 text-center">
+                    <div class="absolute inset-0 flex items-center"><div class="w-full border-t border-slate-200"></div></div>
+                    <span class="relative px-3 bg-white text-[11px] font-semibold text-slate-400 uppercase tracking-wider">
+                        Atau daftar dengan data diri
+                    </span>
+                </div>
+
+                <form id="register-form" onsubmit="handleRegisterSubmit(event)" class="space-y-3.5">
+                    <div>
+                        <label class="block text-xs font-bold text-slate-700 mb-1">Nama Lengkap</label>
+                        <input type="text" id="reg-name" required placeholder="Contoh: Budi Santoso" class="w-full px-4 py-2.5 rounded-xl border border-slate-200 bg-white text-xs sm:text-sm font-medium text-slate-800 focus:outline-none focus:ring-2 focus:ring-[#F97316] focus:border-[#F97316] transition-all">
+                    </div>
+
+                    <div>
+                        <label class="block text-xs font-bold text-slate-700 mb-1">Alamat Email</label>
+                        <input type="email" id="reg-email" required placeholder="budi@gmail.com" class="w-full px-4 py-2.5 rounded-xl border border-slate-200 bg-white text-xs sm:text-sm font-medium text-slate-800 focus:outline-none focus:ring-2 focus:ring-[#F97316] focus:border-[#F97316] transition-all">
+                    </div>
+
+                    <div>
+                        <label class="block text-xs font-bold text-slate-700 mb-1">Nomor Handphone (Format Indonesia: 08xx / +62xx)</label>
+                        <input type="tel" id="reg-phone" required placeholder="08123456789 atau +628123456789" class="w-full px-4 py-2.5 rounded-xl border border-slate-200 bg-white text-xs sm:text-sm font-medium text-slate-800 focus:outline-none focus:ring-2 focus:ring-[#F97316] focus:border-[#F97316] transition-all">
+                        <span class="text-[10px] text-slate-400 mt-1 block">Nomor ini diverifikasi untuk penautan bot Telegram & keamanan akun.</span>
+                    </div>
+
+                    <div>
+                        <label class="block text-xs font-bold text-slate-700 mb-1">Password</label>
+                        <div class="relative">
+                            <input type="password" id="reg-password" required minlength="8" placeholder="Minimal 8 karakter" class="w-full px-4 py-2.5 pr-10 rounded-xl border border-slate-200 bg-white text-xs sm:text-sm font-medium text-slate-800 focus:outline-none focus:ring-2 focus:ring-[#F97316] focus:border-[#F97316] transition-all">
+                            <button type="button" onclick="togglePasswordVisibility('reg-password', 'eye-icon-reg')" class="absolute inset-y-0 right-0 pr-3 flex items-center text-slate-400 hover:text-slate-600">
+                                <i id="eye-icon-reg" data-lucide="eye" class="w-4 h-4"></i>
+                            </button>
+                        </div>
+                    </div>
+
+                    <button type="submit" id="btn-register-submit" class="btn-primary w-full py-3 rounded-xl text-xs sm:text-sm font-bold shadow-md shadow-orange-500/20 flex items-center justify-center gap-2 mt-2 transition-all">
+                        <span id="btn-register-text">Daftar & Verifikasi OTP</span>
+                        <span id="btn-register-spinner" class="hidden">
+                            <svg class="animate-spin h-4 w-4 text-white" fill="none" viewBox="0 0 24 24">
+                                <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+                                <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                            </svg>
+                        </span>
+                    </button>
+                </form>
+
+                <div class="mt-6 pt-5 border-t border-slate-100 text-center text-xs text-slate-500">
+                    Sudah memiliki akun?
+                    <a href="/login" class="font-bold text-orange-600 hover:underline ml-1">Masuk di sini</a>
+                </div>
+            </div>
+
+            <!-- =============================================================
+                 STEP 2: MODAL / TAMPILAN VERIFIKASI OTP 6-DIGIT
+                 ============================================================= -->
+            <div id="register-step-2" class="hidden">
+                <div class="text-center mb-6">
+                    <div class="w-12 h-12 rounded-2xl bg-orange-100 text-orange-600 flex items-center justify-center mx-auto mb-3 font-bold text-2xl shadow-sm">
+                        📱
+                    </div>
+                    <h2 class="text-xl font-black text-slate-900 tracking-tight">Verifikasi Nomor Handphone</h2>
+                    <p class="text-xs text-slate-500 mt-1">Masukkan 6-digit kode OTP yang dikirimkan ke nomor WhatsApp / SMS Anda.</p>
+                </div>
+
+                <!-- OTP Demo Helper Badge -->
+                <div class="p-3 mb-5 rounded-2xl bg-orange-50 border border-orange-200 text-xs text-center text-orange-900">
+                    <span>Kode OTP Demo: <b id="otp-demo-display" class="font-mono text-sm font-black text-orange-600">123456</b></span>
+                </div>
+
+                <form onsubmit="handleVerifyOtpSubmit(event)" class="space-y-4">
+                    <input type="hidden" id="otp-user-id">
+                    <div>
+                        <input type="text" id="otp-input" required maxlength="6" pattern="[0-9]{6}" placeholder="• • • • • •" class="w-full py-3 text-center text-2xl font-mono font-bold tracking-widest rounded-xl border border-slate-200 bg-slate-50 focus:bg-white focus:outline-none focus:ring-2 focus:ring-[#F97316] focus:border-[#F97316] transition-all">
+                    </div>
+
+                    <button type="submit" id="btn-otp-submit" class="btn-primary w-full py-3 rounded-xl text-xs sm:text-sm font-bold shadow-md shadow-orange-500/20 flex items-center justify-center gap-2">
+                        <span id="btn-otp-text">Verifikasi OTP</span>
+                        <span id="btn-otp-spinner" class="hidden">
+                            <svg class="animate-spin h-4 w-4 text-white" fill="none" viewBox="0 0 24 24">
+                                <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+                                <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                            </svg>
+                        </span>
+                    </button>
+
+                    <button type="button" onclick="handleResendOtp()" class="w-full text-center text-xs font-semibold text-slate-500 hover:text-orange-600 transition-colors pt-1">
+                        Belum menerima kode? <span class="underline">Kirim Ulang OTP</span>
+                    </button>
+                </form>
+            </div>
+
+            <!-- =============================================================
+                 STEP 3: WIZARD ONBOARDING SINGKAT (3 PERTANYAAN FINANSIAL)
+                 ============================================================= -->
+            <div id="register-step-3" class="hidden space-y-5">
+                <div>
+                    <div class="flex items-center justify-between mb-1">
+                        <span class="text-[10px] font-bold text-orange-600 uppercase tracking-wider">Langkah 3 dari 3</span>
+                        <span class="text-[10px] font-bold text-slate-400">Personalisasi AI</span>
+                    </div>
+                    <h2 class="text-xl font-black text-slate-900 tracking-tight">Atur Preferensi Finansialmu</h2>
+                    <p class="text-xs text-slate-500 mt-0.5">Sistem akan menyesuaikan dompet default & rekomendasi kategori anggaran awal.</p>
+                </div>
+
+                <!-- Pertanyaan 1: Persona / Profesi -->
+                <div>
+                    <label class="block text-xs font-bold text-slate-800 mb-2">1. Apa profesi atau sumber pendapatan utama Anda?</label>
+                    <div class="grid grid-cols-2 gap-2 text-xs">
+                        <label class="p-2.5 rounded-xl border border-slate-200 hover:border-orange-400 cursor-pointer flex items-center gap-2 has-[:checked]:border-orange-500 has-[:checked]:bg-orange-50/60 transition-all">
+                            <input type="radio" name="onb-persona" value="karyawan" checked class="text-orange-500 focus:ring-orange-500">
+                            <span class="font-medium text-slate-800">💼 Karyawan</span>
+                        </label>
+                        <label class="p-2.5 rounded-xl border border-slate-200 hover:border-orange-400 cursor-pointer flex items-center gap-2 has-[:checked]:border-orange-500 has-[:checked]:bg-orange-50/60 transition-all">
+                            <input type="radio" name="onb-persona" value="freelancer" class="text-orange-500 focus:ring-orange-500">
+                            <span class="font-medium text-slate-800">💻 Freelancer</span>
+                        </label>
+                        <label class="p-2.5 rounded-xl border border-slate-200 hover:border-orange-400 cursor-pointer flex items-center gap-2 has-[:checked]:border-orange-500 has-[:checked]:bg-orange-50/60 transition-all">
+                            <input type="radio" name="onb-persona" value="pebisnis" class="text-orange-500 focus:ring-orange-500">
+                            <span class="font-medium text-slate-800">🏪 Pebisnis</span>
+                        </label>
+                        <label class="p-2.5 rounded-xl border border-slate-200 hover:border-orange-400 cursor-pointer flex items-center gap-2 has-[:checked]:border-orange-500 has-[:checked]:bg-orange-50/60 transition-all">
+                            <input type="radio" name="onb-persona" value="mahasiswa" class="text-orange-500 focus:ring-orange-500">
+                            <span class="font-medium text-slate-800">🎓 Mahasiswa</span>
+                        </label>
+                    </div>
+                </div>
+
+                <!-- Pertanyaan 2: Target Finansial -->
+                <div>
+                    <label class="block text-xs font-bold text-slate-800 mb-2">2. Apa target finansial utama Anda bulan ini?</label>
+                    <select id="onb-goal" class="w-full px-3.5 py-2.5 rounded-xl border border-slate-200 bg-white text-xs font-medium text-slate-800 focus:outline-none focus:ring-2 focus:ring-[#F97316] focus:border-[#F97316]">
+                        <option value="stop_boncos">🛑 Berhenti boncos di akhir bulan (Kendalikan jajan)</option>
+                        <option value="save_20">💰 Menabung minimal 20% dari penghasilan</option>
+                        <option value="track_receipts">🧾 Mengontrol struk belanja kasir & tagihan rutin</option>
+                    </select>
+                </div>
+
+                <!-- Pertanyaan 3: Kategori Rekomendasi AI -->
+                <div>
+                    <div class="flex items-center justify-between mb-2">
+                        <label class="block text-xs font-bold text-slate-800">3. Rekomendasi Set Kategori Awal AI:</label>
+                        <span class="text-[10px] text-orange-600 font-bold">5 Kategori Standar</span>
+                    </div>
+                    <div class="space-y-1.5 max-h-40 overflow-y-auto p-2 border border-slate-100 rounded-xl bg-slate-50/50 text-xs">
+                        <label class="flex items-center justify-between p-2 rounded-lg bg-white border border-slate-200">
+                            <span class="flex items-center gap-2 font-medium text-slate-800">
+                                <input type="checkbox" checked disabled class="text-orange-500 rounded">
+                                <span>🍜 Makanan & Minuman</span>
+                            </span>
+                            <span class="text-[11px] text-slate-500 font-mono">Rp 1.500.000</span>
+                        </label>
+                        <label class="flex items-center justify-between p-2 rounded-lg bg-white border border-slate-200">
+                            <span class="flex items-center gap-2 font-medium text-slate-800">
+                                <input type="checkbox" checked disabled class="text-orange-500 rounded">
+                                <span>🚗 Transportasi & Bensin</span>
+                            </span>
+                            <span class="text-[11px] text-slate-500 font-mono">Rp 500.000</span>
+                        </label>
+                        <label class="flex items-center justify-between p-2 rounded-lg bg-white border border-slate-200">
+                            <span class="flex items-center gap-2 font-medium text-slate-800">
+                                <input type="checkbox" checked disabled class="text-orange-500 rounded">
+                                <span>🎮 Hiburan & Hobi</span>
+                            </span>
+                            <span class="text-[11px] text-slate-500 font-mono">Rp 300.000</span>
+                        </label>
+                        <label class="flex items-center justify-between p-2 rounded-lg bg-white border border-slate-200">
+                            <span class="flex items-center gap-2 font-medium text-slate-800">
+                                <input type="checkbox" checked disabled class="text-orange-500 rounded">
+                                <span>🏠 Tagihan & Utilitas</span>
+                            </span>
+                            <span class="text-[11px] text-slate-500 font-mono">Rp 750.000</span>
+                        </label>
+                        <label class="flex items-center justify-between p-2 rounded-lg bg-white border border-slate-200">
+                            <span class="flex items-center gap-2 font-medium text-slate-800">
+                                <input type="checkbox" checked disabled class="text-orange-500 rounded">
+                                <span>💰 Gaji Bulanan</span>
+                            </span>
+                            <span class="text-[11px] text-emerald-600 font-bold">Pemasukan</span>
+                        </label>
+                    </div>
+                </div>
+
+                <!-- Submit Button -->
+                <button type="button" id="btn-onboarding-finish" onclick="handleFinishOnboarding()" class="btn-primary w-full py-3 rounded-xl text-xs sm:text-sm font-bold shadow-md shadow-orange-500/20 flex items-center justify-center gap-2 mt-4">
+                    <span>Simpan & Masuk ke Dashboard &rarr;</span>
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+{{ super() }}
+<script>
+    let currentUserId = null;
+
+    function togglePasswordVisibility(inputId, iconId) {
+        const input = document.getElementById(inputId);
+        const icon = document.getElementById(iconId);
+        if (input.type === "password") {
+            input.type = "text";
+            icon.setAttribute("data-lucide", "eye-off");
+        } else {
+            input.type = "password";
+            icon.setAttribute("data-lucide", "eye");
+        }
+        if (window.lucide) window.lucide.createIcons();
+    }
+
+    function handleGoogleOAuthMock() {
+        document.getElementById("reg-name").value = "Google User";
+        document.getElementById("reg-email").value = "google_" + Date.now() + "@tatadana.id";
+        document.getElementById("reg-phone").value = "081298765432";
+        document.getElementById("reg-password").value = "Password123!";
+        showToast("Menghubungkan akun Google...", "info");
+        setTimeout(() => {
+            document.getElementById("register-form").dispatchEvent(new Event("submit"));
+        }, 400);
+    }
+
+    async function handleRegisterSubmit(e) {
+        e.preventDefault();
+        const full_name = document.getElementById("reg-name").value.trim();
+        const email = document.getElementById("reg-email").value.trim();
+        const phone_number = document.getElementById("reg-phone").value.trim();
+        const password = document.getElementById("reg-password").value;
+
+        const btn = document.getElementById("btn-register-submit");
+        const btnText = document.getElementById("btn-register-text");
+        const btnSpinner = document.getElementById("btn-register-spinner");
+
+        if (password.length < 8) {
+            showToast("Password minimal 8 karakter.", "error");
+            return;
+        }
+
+        // Set Loading State
+        btn.disabled = true;
+        btnText.innerText = "Mendaftarkan Akun...";
+        btnSpinner.classList.remove("hidden");
+
+        try {
+            const res = await apiCall("/api/auth/register", {
+                method: "POST",
+                body: JSON.stringify({ full_name, email, phone_number, password })
+            });
+
+            currentUserId = res.data.user_id;
+            document.getElementById("otp-user-id").value = currentUserId;
+            document.getElementById("otp-demo-display").innerText = res.data.otp_preview || "123456";
+
+            // Switch to Step 2 OTP
+            document.getElementById("register-step-1").classList.add("hidden");
+            document.getElementById("register-step-2").classList.remove("hidden");
+            showToast("Akun berhasil dibuat! Silakan verifikasi OTP nomor HP Anda.", "info");
+        } catch (err) {
+            showToast(err.message || "Gagal membuat akun.", "error");
+            btn.disabled = false;
+            btnText.innerText = "Daftar & Verifikasi OTP";
+            btnSpinner.classList.add("hidden");
+        }
+    }
+
+    async function handleVerifyOtpSubmit(e) {
+        e.preventDefault();
+        const otp_code = document.getElementById("otp-input").value.trim();
+        const user_id = document.getElementById("otp-user-id").value || currentUserId;
+
+        const btn = document.getElementById("btn-otp-submit");
+        const btnText = document.getElementById("btn-otp-text");
+        const btnSpinner = document.getElementById("btn-otp-spinner");
+
+        btn.disabled = true;
+        btnText.innerText = "Memverifikasi OTP...";
+        btnSpinner.classList.remove("hidden");
+
+        try {
+            await apiCall("/api/auth/verify-otp", {
+                method: "POST",
+                body: JSON.stringify({ user_id, otp_code })
+            });
+
+            showToast("Nomor HP berhasil diverifikasi!", "success");
+
+            // Switch to Step 3: Onboarding Wizard
+            document.getElementById("register-step-2").classList.add("hidden");
+            document.getElementById("register-step-3").classList.remove("hidden");
+        } catch (err) {
+            showToast(err.message || "Kode OTP tidak cocok.", "error");
+            btn.disabled = false;
+            btnText.innerText = "Verifikasi OTP";
+            btnSpinner.classList.add("hidden");
+        }
+    }
+
+    async function handleResendOtp() {
+        try {
+            const res = await apiCall("/api/auth/resend-otp", {
+                method: "POST",
+                body: JSON.stringify({ user_id: currentUserId })
+            });
+            document.getElementById("otp-demo-display").innerText = res.otp_preview;
+            showToast("Kode OTP baru telah dikirimkan!", "success");
+        } catch (err) {
+            showToast(err.message || "Gagal mengirim ulang OTP.", "error");
+        }
+    }
+
+    async function handleFinishOnboarding() {
+        const btn = document.getElementById("btn-onboarding-finish");
+        btn.disabled = true;
+        btn.innerText = "Menyiapkan Dashboard...";
+
+        const personaElem = document.querySelector('input[name="onb-persona"]:checked');
+        const persona = personaElem ? personaElem.value : "karyawan";
+        const goal = document.getElementById("onb-goal").value;
+
+        // 5 Initial Recommended Categories
+        const initialCategories = [
+            { name: "Makanan & Minuman", type: "expense", icon: "🍜", color: "#FF6B00", monthly_budget: 1500000.0 },
+            { name: "Transportasi & Bensin", type: "expense", icon: "🚗", color: "#3B82F6", monthly_budget: 500000.0 },
+            { name: "Hiburan & Hobi", type: "expense", icon: "🎮", color: "#8B5CF6", monthly_budget: 300000.0 },
+            { name: "Tagihan & Utilitas", type: "expense", icon: "🏠", color: "#EF4444", monthly_budget: 750000.0 },
+            { name: "Gaji Bulanan", type: "income", icon: "💰", color: "#059669", monthly_budget: 0.0 }
+        ];
+
+        try {
+            await apiCall("/api/auth/onboarding", {
+                method: "POST",
+                body: JSON.stringify({
+                    user_id: currentUserId,
+                    persona: persona,
+                    financial_goal: goal,
+                    wallet_name: "Dompet Tunai",
+                    selected_categories: initialCategories
+                })
+            });
+
+            showToast("Pengaturan awal selesai! Menuju dashboard...", "success");
+            setTimeout(() => {
+                window.location.href = "/dashboard";
+            }, 600);
+        } catch (err) {
+            showToast(err.message || "Gagal menyimpan preferensi.", "error");
+            btn.disabled = false;
+            btn.innerText = "Simpan & Masuk ke Dashboard →";
+        }
+    }
+
+    document.addEventListener("DOMContentLoaded", () => {
+        if (window.lucide) window.lucide.createIcons();
+    });
+</script>
+{% endblock %}

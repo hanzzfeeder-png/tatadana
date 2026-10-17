@@ -1,0 +1,393 @@
+{% extends "dashboard/layout.html" %}
+
+{% block page_title %}Beranda{% endblock %}
+{% block page_subtitle %}Ringkasan finansial dan aktivitas dompet Anda bulan ini{% endblock %}
+
+{% block content %}
+<div class="space-y-6">
+    <!-- Onboarding Checklist (Appears for new users or until completed) -->
+    <div id="onboarding-card" class="hidden card-premium p-6 border-l-4 border-l-orange-500 bg-gradient-to-r from-orange-50/50 to-white">
+        <div class="flex items-start justify-between">
+            <div>
+                <h3 class="font-bold text-slate-900 text-base flex items-center gap-2">
+                    <span>🚀 Langkah Awal Memulai TataDana</span>
+                </h3>
+                <p class="text-xs text-slate-600 mt-1">Selesaikan 3 langkah mudah ini untuk kendali finansial maksimal.</p>
+            </div>
+            <span id="onboarding-progress-badge" class="px-2.5 py-1 rounded-full text-xs font-bold bg-orange-100 text-orange-700">0/3 Selesai</span>
+        </div>
+
+        <div class="grid grid-cols-1 md:grid-cols-3 gap-4 mt-5">
+            <!-- Step 1: Telegram -->
+            <div id="step-telegram" class="p-4 rounded-xl border border-slate-200 bg-white flex items-start gap-3">
+                <div class="w-8 h-8 rounded-lg bg-orange-100 text-orange-600 flex items-center justify-center font-bold text-sm shrink-0">1</div>
+                <div>
+                    <h4 class="font-bold text-xs text-slate-900">Hubungkan Telegram</h4>
+                    <p class="text-[11px] text-slate-500 mt-0.5">Catat transaksi semudah chat teman langsung dari HP.</p>
+                    <a href="/dashboard/settings?tab=telegram" class="inline-block mt-2 text-xs font-bold text-orange-600 hover:underline">Hubungkan Sekarang &rarr;</a>
+                </div>
+            </div>
+
+            <!-- Step 2: Wallet -->
+            <div id="step-wallet" class="p-4 rounded-xl border border-slate-200 bg-white flex items-start gap-3">
+                <div class="w-8 h-8 rounded-lg bg-blue-100 text-blue-600 flex items-center justify-center font-bold text-sm shrink-0">2</div>
+                <div>
+                    <h4 class="font-bold text-xs text-slate-900">Atur Dompet Utama</h4>
+                    <p class="text-[11px] text-slate-500 mt-0.5">Sesuaikan saldo awal Cash, BCA, GoPay atau rekeningmu.</p>
+                    <a href="/dashboard/wallet" class="inline-block mt-2 text-xs font-bold text-blue-600 hover:underline">Kelola Dompet &rarr;</a>
+                </div>
+            </div>
+
+            <!-- Step 3: Budget -->
+            <div id="step-budget" class="p-4 rounded-xl border border-slate-200 bg-white flex items-start gap-3">
+                <div class="w-8 h-8 rounded-lg bg-emerald-100 text-emerald-600 flex items-center justify-center font-bold text-sm shrink-0">3</div>
+                <div>
+                    <h4 class="font-bold text-xs text-slate-900">Tentukan Budget Bulanan</h4>
+                    <p class="text-[11px] text-slate-500 mt-0.5">Pasang batas pengeluaran kategori agar tidak boncos.</p>
+                    <a href="/dashboard/budget" class="inline-block mt-2 text-xs font-bold text-emerald-600 hover:underline">Set Budget &rarr;</a>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- 4 Stats Cards -->
+    <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+        <!-- Saldo Total -->
+        <div class="card-premium p-5 relative overflow-hidden">
+            <div class="flex items-center justify-between">
+                <span class="text-xs font-bold text-slate-400 uppercase tracking-wider">Saldo Total</span>
+                <div class="w-9 h-9 rounded-xl bg-orange-100 text-orange-600 flex items-center justify-center">
+                    <i data-lucide="wallet" class="w-5 h-5"></i>
+                </div>
+            </div>
+            <div class="mt-3">
+                <div id="stat-total-balance" class="text-2xl font-black text-slate-900 tracking-tight">Rp 0</div>
+                <div class="text-[11px] text-slate-400 mt-1">Gabungan seluruh dompet aktif</div>
+            </div>
+        </div>
+
+        <!-- Pemasukan Bulan Ini -->
+        <div class="card-premium p-5 relative overflow-hidden">
+            <div class="flex items-center justify-between">
+                <span class="text-xs font-bold text-slate-400 uppercase tracking-wider">Pemasukan Bulan Ini</span>
+                <div class="w-9 h-9 rounded-xl bg-emerald-100 text-emerald-600 flex items-center justify-center">
+                    <i data-lucide="arrow-down-left" class="w-5 h-5"></i>
+                </div>
+            </div>
+            <div class="mt-3">
+                <div id="stat-income-month" class="text-2xl font-black text-emerald-600 tracking-tight">Rp 0</div>
+                <div class="text-[11px] text-emerald-600 font-semibold mt-1">Total cashflow masuk</div>
+            </div>
+        </div>
+
+        <!-- Pengeluaran Bulan Ini -->
+        <div class="card-premium p-5 relative overflow-hidden">
+            <div class="flex items-center justify-between">
+                <span class="text-xs font-bold text-slate-400 uppercase tracking-wider">Pengeluaran Bulan Ini</span>
+                <div class="w-9 h-9 rounded-xl bg-red-100 text-red-600 flex items-center justify-center">
+                    <i data-lucide="arrow-up-right" class="w-5 h-5"></i>
+                </div>
+            </div>
+            <div class="mt-3">
+                <div id="stat-expense-month" class="text-2xl font-black text-red-600 tracking-tight">Rp 0</div>
+                <div class="text-[11px] text-red-500 font-semibold mt-1">Pengeluaran tercatat</div>
+            </div>
+        </div>
+
+        <!-- Budget Tersisa -->
+        <div class="card-premium p-5 relative overflow-hidden">
+            <div class="flex items-center justify-between">
+                <span class="text-xs font-bold text-slate-400 uppercase tracking-wider">Budget Tersisa</span>
+                <div class="w-9 h-9 rounded-xl bg-blue-100 text-blue-600 flex items-center justify-center">
+                    <i data-lucide="pie-chart" class="w-5 h-5"></i>
+                </div>
+            </div>
+            <div class="mt-3">
+                <div id="stat-budget-remaining" class="text-2xl font-black text-slate-900 tracking-tight">Rp 0</div>
+                <div id="stat-budget-sub" class="text-[11px] text-slate-400 mt-1">Dari total alokasi budget</div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Charts Section: 2 Columns -->
+    <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+        <!-- 6-Month Comparison Bar Chart (Col Span 2) -->
+        <div class="card-premium p-6 lg:col-span-2">
+            <div class="flex items-center justify-between mb-4">
+                <div>
+                    <h3 class="font-bold text-slate-900 text-sm">Pemasukan vs Pengeluaran (6 Bulan Terakhir)</h3>
+                    <p class="text-xs text-slate-400">Analisis tren komparasi arus kas bulanan</p>
+                </div>
+                <div class="flex items-center gap-3 text-xs font-semibold">
+                    <span class="flex items-center gap-1.5"><span class="w-3 h-3 rounded-full bg-emerald-500"></span> Masuk</span>
+                    <span class="flex items-center gap-1.5"><span class="w-3 h-3 rounded-full bg-orange-500"></span> Keluar</span>
+                </div>
+            </div>
+            <div class="h-64">
+                <canvas id="barChart"></canvas>
+            </div>
+        </div>
+
+        <!-- Pie Chart Pengeluaran Kategori (Col Span 1) -->
+        <div class="card-premium p-6">
+            <div class="mb-4">
+                <h3 class="font-bold text-slate-900 text-sm">Proporsi Pengeluaran</h3>
+                <p class="text-xs text-slate-400">Distribusi biaya per kategori bulan ini</p>
+            </div>
+            <div class="h-64 flex items-center justify-center">
+                <canvas id="pieChart"></canvas>
+            </div>
+        </div>
+    </div>
+
+    <!-- Daily Trend Line Chart -->
+    <div class="card-premium p-6">
+        <div class="flex items-center justify-between mb-4">
+            <div>
+                <h3 class="font-bold text-slate-900 text-sm">Tren Pengeluaran Harian Bulan Ini</h3>
+                <p class="text-xs text-slate-400">Fluktuasi harian dalam rupiah (WIB)</p>
+            </div>
+        </div>
+        <div class="h-56">
+            <canvas id="trendChart"></canvas>
+        </div>
+    </div>
+
+    <!-- 10 Transaksi Terbaru -->
+    <div class="card-premium p-6">
+        <div class="flex items-center justify-between mb-5">
+            <div>
+                <h3 class="font-bold text-slate-900 text-sm">10 Transaksi Terbaru</h3>
+                <p class="text-xs text-slate-400">Aktivitas keuangan terakhir dari Telegram & Web</p>
+            </div>
+            <a href="/dashboard/transaksi" class="text-xs font-bold text-orange-600 hover:underline">Lihat Semua &rarr;</a>
+        </div>
+
+        <div class="overflow-x-auto">
+            <table class="w-full text-left text-xs">
+                <thead>
+                    <tr class="border-b border-slate-100 text-slate-400 uppercase font-semibold">
+                        <th class="pb-3">Tanggal (WIB)</th>
+                        <th class="pb-3">Kategori</th>
+                        <th class="pb-3">Dompet</th>
+                        <th class="pb-3">Sumber</th>
+                        <th class="pb-3">Catatan</th>
+                        <th class="pb-3 text-right">Nominal</th>
+                    </tr>
+                </thead>
+                <tbody id="recent-tx-table-body" class="divide-y divide-slate-100 font-medium">
+                    <tr><td colspan="6" class="py-6 text-center text-slate-400">Memuat data transaksi...</td></tr>
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+{{ super() }}
+<script>
+    let barChartInstance = null;
+    let pieChartInstance = null;
+    let trendChartInstance = null;
+
+    async function loadDashboardStats() {
+        try {
+            const res = await apiCall("/api/transactions/stats");
+            const data = res;
+
+            // 1. Stats Cards
+            document.getElementById("stat-total-balance").innerText = formatIDR(data.cards.total_balance);
+            document.getElementById("stat-income-month").innerText = formatIDR(data.cards.monthly_income);
+            document.getElementById("stat-expense-month").innerText = formatIDR(data.cards.monthly_expense);
+            document.getElementById("stat-budget-remaining").innerText = formatIDR(data.cards.budget_remaining);
+            document.getElementById("stat-budget-sub").innerText = `Dari total budget ${formatIDR(data.cards.total_budget)}`;
+
+            // 2. Onboarding Checklist
+            const ob = data.onboarding;
+            const obCard = document.getElementById("onboarding-card");
+            if (obCard) {
+                if (ob.is_complete) {
+                    obCard.classList.add("hidden");
+                } else {
+                    obCard.classList.remove("hidden");
+                    let completedCount = 0;
+                    if (ob.is_telegram_linked) {
+                        completedCount++;
+                        document.getElementById("step-telegram").classList.add("bg-emerald-50/50", "border-emerald-200");
+                    }
+                    if (ob.has_wallet) {
+                        completedCount++;
+                        document.getElementById("step-wallet").classList.add("bg-emerald-50/50", "border-emerald-200");
+                    }
+                    if (ob.has_budget) {
+                        completedCount++;
+                        document.getElementById("step-budget").classList.add("bg-emerald-50/50", "border-emerald-200");
+                    }
+                    document.getElementById("onboarding-progress-badge").innerText = `${completedCount}/3 Selesai`;
+                }
+            }
+
+            // 3. Render 6-Month Bar Chart
+            renderBarChart(data.charts.bar);
+
+            // 4. Render Pie Chart
+            renderPieChart(data.charts.pie);
+
+            // 5. Render Daily Trend Chart
+            renderTrendChart(data.charts.trend);
+
+            // 6. Recent Transactions Table
+            renderRecentTable(data.recent_transactions);
+
+        } catch (e) {
+            console.error("Gagal load stats", e);
+        }
+    }
+
+    function renderBarChart(barData) {
+        const ctx = document.getElementById("barChart").getContext("2d");
+        if (barChartInstance) barChartInstance.destroy();
+
+        barChartInstance = new Chart(ctx, {
+            type: "bar",
+            data: {
+                labels: barData.labels,
+                datasets: [
+                    {
+                        label: "Pemasukan",
+                        data: barData.income,
+                        backgroundColor: "#10B981",
+                        borderRadius: 6
+                    },
+                    {
+                        label: "Pengeluaran",
+                        data: barData.expense,
+                        backgroundColor: "#FF6B00",
+                        borderRadius: 6
+                    }
+                ]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: { legend: { display: false } },
+                scales: {
+                    x: { grid: { display: false } },
+                    y: {
+                        ticks: {
+                            callback: v => "Rp " + (v / 1000000).toFixed(1) + "jt"
+                        }
+                    }
+                }
+            }
+        });
+    }
+
+    function renderPieChart(pieData) {
+        const ctx = document.getElementById("pieChart").getContext("2d");
+        if (pieChartInstance) pieChartInstance.destroy();
+
+        if (!pieData.values || pieData.values.length === 0) {
+            ctx.canvas.parentElement.innerHTML = `<div class="text-xs text-slate-400 py-10 text-center">Belum ada pengeluaran bulan ini</div>`;
+            return;
+        }
+
+        pieChartInstance = new Chart(ctx, {
+            type: "doughnut",
+            data: {
+                labels: pieData.labels,
+                datasets: [{
+                    data: pieData.values,
+                    backgroundColor: pieData.colors,
+                    borderWidth: 2,
+                    borderColor: "#FFFFFF"
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: {
+                    legend: { position: "bottom", labels: { boxWidth: 10, font: { size: 10 } } }
+                },
+                cutout: "68%"
+            }
+        });
+    }
+
+    function renderTrendChart(trendData) {
+        const ctx = document.getElementById("trendChart").getContext("2d");
+        if (trendChartInstance) trendChartInstance.destroy();
+
+        trendChartInstance = new Chart(ctx, {
+            type: "line",
+            data: {
+                labels: trendData.labels,
+                datasets: [{
+                    label: "Pengeluaran",
+                    data: trendData.values,
+                    borderColor: "#FF6B00",
+                    backgroundColor: "rgba(255, 107, 0, 0.08)",
+                    borderWidth: 2.5,
+                    fill: true,
+                    tension: 0.35,
+                    pointBackgroundColor: "#FF6B00",
+                    pointRadius: 3
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: { legend: { display: false } },
+                scales: {
+                    x: { grid: { display: false } },
+                    y: {
+                        ticks: {
+                            callback: v => "Rp " + (v >= 1000000 ? (v/1000000).toFixed(1) + "jt" : (v/1000).toFixed(0) + "rb")
+                        }
+                    }
+                }
+            }
+        });
+    }
+
+    function renderRecentTable(txs) {
+        const tbody = document.getElementById("recent-tx-table-body");
+        if (!txs || txs.length === 0) {
+            tbody.innerHTML = `<tr><td colspan="6" class="py-6 text-center text-slate-400">Belum ada transaksi. Klik <b>+ Catat Transaksi</b> untuk menambahkan.</td></tr>`;
+            return;
+        }
+
+        const sourceBadges = {
+            web: `<span class="inline-flex items-center px-1.5 py-0.5 rounded text-[10px] bg-slate-100 text-slate-600">Web</span>`,
+            telegram_text: `<span class="inline-flex items-center px-1.5 py-0.5 rounded text-[10px] bg-sky-100 text-sky-700">TG Teks</span>`,
+            telegram_photo: `<span class="inline-flex items-center px-1.5 py-0.5 rounded text-[10px] bg-purple-100 text-purple-700">TG Struk</span>`,
+            telegram_voice: `<span class="inline-flex items-center px-1.5 py-0.5 rounded text-[10px] bg-amber-100 text-amber-700">TG Voice</span>`
+        };
+
+        tbody.innerHTML = txs.map(t => {
+            const isInc = t.type === 'income';
+            const isTrf = t.type === 'transfer';
+            const sign = isInc ? "+" : (isTrf ? "" : "-");
+            const colorClass = isInc ? "text-emerald-600" : (isTrf ? "text-blue-600" : "text-slate-900");
+
+            return `
+            <tr class="hover:bg-slate-50/70 transition-colors">
+                <td class="py-3 text-slate-500">${t.transaction_date.slice(0, 16)}</td>
+                <td class="py-3 font-semibold text-slate-800">${t.category_icon || '🏷️'} ${t.category_name || (isTrf ? 'Transfer Dompet' : '-')}</td>
+                <td class="py-3 text-slate-600">${t.wallet_name || '-'}</td>
+                <td class="py-3">${sourceBadges[t.source] || sourceBadges.web}</td>
+                <td class="py-3 text-slate-600">${t.note || '-'}</td>
+                <td class="py-3 text-right font-bold ${colorClass}">${sign}${formatIDR(t.amount)}</td>
+            </tr>
+            `;
+        }).join('');
+    }
+
+    window.refreshPageData = loadDashboardStats;
+
+    document.addEventListener("DOMContentLoaded", () => {
+        loadDashboardStats();
+    });
+</script>
+{% endblock %}

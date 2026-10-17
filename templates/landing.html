@@ -1,0 +1,1098 @@
+{% extends "base.html" %}
+
+{% block title %}TataDana — Catat Keuangan Semudah Chat Langsung dari Telegram Kamu{% endblock %}
+
+{% block head %}
+<style>
+    html {
+        scroll-behavior: smooth;
+    }
+    .faq-answer {
+        max-height: 0;
+        overflow: hidden;
+        transition: max-height 0.3s ease-out, opacity 0.25s ease-out;
+        opacity: 0;
+    }
+    .faq-answer.open {
+        max-height: 400px;
+        opacity: 1;
+        transition: max-height 0.35s ease-in, opacity 0.3s ease-in;
+    }
+    .chat-bubble {
+        animation: fadeInBubble 0.25s cubic-bezier(0.16, 1, 0.3, 1);
+    }
+    @keyframes fadeInBubble {
+        from { opacity: 0; transform: translateY(8px); }
+        to { opacity: 1; transform: translateY(0); }
+    }
+</style>
+{% endblock %}
+
+{% block body %}
+<!-- =============================================================================
+     1. STICKY NAVBAR
+     ============================================================================= -->
+<nav class="sticky top-0 z-50 bg-white/90 backdrop-blur-md border-b border-slate-200/80 transition-all">
+    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-16 flex items-center justify-between">
+        <!-- Brand Logo & Fintech Badge -->
+        <div class="flex items-center gap-3">
+            <a href="/" class="flex items-center gap-2.5 group">
+                <div class="w-9 h-9 rounded-xl bg-gradient-to-tr from-orange-600 to-orange-400 flex items-center justify-center text-white font-black text-xl shadow-md shadow-orange-500/25 group-hover:scale-105 transition-transform">
+                    T
+                </div>
+                <span class="font-black text-xl tracking-tight text-slate-900">Tata<span class="text-orange-500">Dana</span></span>
+            </a>
+            <span class="hidden sm:inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-extrabold uppercase tracking-wider bg-orange-100 text-orange-800 border border-orange-200">
+                SMART FINTECH
+            </span>
+        </div>
+
+        <!-- Desktop Menu Anchors -->
+        <div class="hidden md:flex items-center gap-8 text-xs font-bold text-slate-600">
+            <a href="#fitur" class="hover:text-orange-600 transition-colors">Fitur</a>
+            <a href="#demo" class="hover:text-orange-600 transition-colors">Cara Kerja</a>
+            <a href="#harga" class="hover:text-orange-600 transition-colors">Harga</a>
+            <a href="#faq" class="hover:text-orange-600 transition-colors">FAQ</a>
+        </div>
+
+        <!-- Action Buttons (Desktop) -->
+        <div class="hidden md:flex items-center gap-3">
+            <a href="/login" class="px-4 py-2 rounded-xl text-xs font-bold text-slate-700 hover:text-slate-900 hover:bg-slate-100 transition-colors">
+                Masuk
+            </a>
+            <a href="/register" class="btn-primary px-5 py-2.5 rounded-xl text-xs font-bold shadow-md shadow-orange-500/20">
+                Coba Gratis
+            </a>
+        </div>
+
+        <!-- Mobile Hamburger Toggle -->
+        <button id="mobile-menu-btn" onclick="toggleMobileMenu()" class="md:hidden p-2 rounded-xl text-slate-600 hover:bg-slate-100 focus:outline-none" aria-label="Toggle navigation menu">
+            <i data-lucide="menu" id="menu-icon" class="w-5 h-5"></i>
+        </button>
+    </div>
+
+    <!-- Mobile Dropdown Menu -->
+    <div id="mobile-menu" class="hidden md:hidden bg-white border-b border-slate-200 px-4 pt-2 pb-6 space-y-3">
+        <a href="#fitur" onclick="toggleMobileMenu()" class="block py-2 text-xs font-bold text-slate-700 hover:text-orange-600">Fitur</a>
+        <a href="#demo" onclick="toggleMobileMenu()" class="block py-2 text-xs font-bold text-slate-700 hover:text-orange-600">Cara Kerja</a>
+        <a href="#harga" onclick="toggleMobileMenu()" class="block py-2 text-xs font-bold text-slate-700 hover:text-orange-600">Harga</a>
+        <a href="#faq" onclick="toggleMobileMenu()" class="block py-2 text-xs font-bold text-slate-700 hover:text-orange-600">FAQ</a>
+        <div class="pt-3 border-t border-slate-100 flex flex-col gap-2">
+            <a href="/login" class="w-full py-2.5 rounded-xl text-xs font-bold text-center border border-slate-200 text-slate-700">Masuk</a>
+            <a href="/register" class="btn-primary w-full py-2.5 rounded-xl text-xs font-bold text-center">Coba Gratis</a>
+        </div>
+    </div>
+</nav>
+
+<!-- =============================================================================
+     2. HERO SECTION
+     ============================================================================= -->
+<section class="relative pt-16 pb-24 overflow-hidden bg-gradient-to-b from-orange-50/50 via-[#F8FAFC] to-[#F8FAFC]">
+    <div class="max-w-5xl mx-auto px-4 sm:px-6 text-center">
+        <!-- Pre-headline badge -->
+        <div class="inline-flex items-center gap-2 px-4 py-1.5 rounded-full text-xs font-bold bg-orange-100 text-orange-800 mb-6 border border-orange-200/80 shadow-sm animate-bounce-subtle">
+            <span>✨ Catat keuangan langsung dari Telegram</span>
+        </div>
+
+        <!-- Headline (H1) -->
+        <h1 class="text-4xl sm:text-5xl lg:text-6xl font-black text-slate-900 tracking-tight leading-[1.18] max-w-4xl mx-auto">
+            Gaji habis sebelum akhir bulan? Sudah saatnya kamu tahu <span class="text-gradient-orange">ke mana uangmu pergi.</span>
+        </h1>
+
+        <!-- Sub-headline -->
+        <p class="mt-6 text-base sm:text-lg text-slate-600 max-w-2xl mx-auto leading-relaxed">
+            TataDana mencatat setiap pengeluaranmu langsung dari chat Telegram atau foto struk — sisanya kami yang urus.
+        </p>
+
+        <!-- CTA Buttons -->
+        <div class="mt-8 flex flex-col sm:flex-row items-center justify-center gap-4">
+            <a href="/register" class="btn-primary w-full sm:w-auto px-8 py-3.5 rounded-2xl text-sm font-bold shadow-lg shadow-orange-500/25">
+                Mulai Gratis Sekarang
+            </a>
+            <a href="#demo" class="w-full sm:w-auto px-6 py-3.5 rounded-2xl text-sm font-bold text-slate-700 bg-white hover:bg-slate-50 border border-slate-200 transition-colors shadow-sm flex items-center justify-center gap-2">
+                <span>Lihat cara kerjanya</span>
+                <i data-lucide="arrow-right" class="w-4 h-4 text-orange-500"></i>
+            </a>
+        </div>
+
+        <!-- Hero Section Video Placeholder -->
+        <!-- // TODO: ganti dengan video asli presentasi produk -->
+        <div class="mt-14 max-w-4xl mx-auto relative group">
+            <div class="absolute -inset-1.5 bg-gradient-to-r from-orange-500 via-amber-500 to-orange-600 rounded-3xl blur-lg opacity-20 group-hover:opacity-35 transition duration-1000"></div>
+            <div class="relative bg-slate-900 rounded-3xl overflow-hidden border border-slate-800 shadow-2xl aspect-video flex flex-col items-center justify-center text-slate-400 p-8">
+                <!-- Video Screen Ambient Graphics -->
+                <div class="absolute inset-0 bg-[radial-gradient(ellipse_at_top,_var(--tw-gradient-stops))] from-slate-800/60 via-slate-900 to-slate-950"></div>
+                
+                <div class="relative z-10 flex flex-col items-center text-center">
+                    <div class="w-16 h-16 sm:w-20 sm:h-20 rounded-full bg-orange-500/20 text-orange-400 border border-orange-500/30 flex items-center justify-center mb-4 cursor-pointer hover:scale-110 hover:bg-orange-500 hover:text-white transition-all shadow-xl shadow-orange-500/20">
+                        <i data-lucide="play" class="w-7 h-7 sm:w-8 sm:h-8 fill-current ml-1"></i>
+                    </div>
+                    <span class="text-white font-bold text-base sm:text-lg">Video Demo: Catat Pengeluaran 3 Detik di Telegram</span>
+                    <span class="text-xs text-slate-400 mt-1.5 max-w-md">Tonton bagaimana AI mengekstrak nominal teks, foto struk kasir, dan mengelola saldo multi-dompet secara otomatis.</span>
+                    <span class="text-[11px] text-orange-400/90 mt-4 font-mono bg-slate-800/80 px-3 py-1 rounded-full border border-slate-700">
+                        // TODO: ganti dengan video asli
+                    </span>
+                </div>
+            </div>
+        </div>
+    </div>
+</section>
+
+<!-- =============================================================================
+     3. PROBLEM-AWARE SECTION (3 MASALAH PENGGUNA)
+     ============================================================================= -->
+<section class="py-20 bg-white border-y border-slate-200/70">
+    <div class="max-w-5xl mx-auto px-4 sm:px-6">
+        <div class="text-center max-w-2xl mx-auto mb-14">
+            <span class="text-xs font-bold text-orange-600 uppercase tracking-widest">Kenapa Keuangan Sulit Terkontrol?</span>
+            <h2 class="text-2xl sm:text-3xl font-black text-slate-900 mt-2">Masalah Klasik yang Sering Kita Alami</h2>
+            <p class="text-xs sm:text-sm text-slate-500 mt-2">Bukan karena kamu tidak punya uang, tapi karena sistem pencatatan lama terlalu menyiksa.</p>
+        </div>
+
+        <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
+            <!-- Problem 1 -->
+            <div class="card-premium p-6 border-t-4 border-t-rose-500 bg-white">
+                <div class="w-11 h-11 rounded-2xl bg-rose-50 text-rose-500 flex items-center justify-center text-2xl mb-4 shadow-sm">
+                    😫
+                </div>
+                <h3 class="font-bold text-sm text-slate-900 leading-snug">"Buka aplikasi keuangan? Nanti dulu deh..."</h3>
+                <p class="text-xs text-slate-500 mt-2.5 leading-relaxed">
+                    Aplikasi keuangan tradisional terlalu ribet: harus login, pilih form rumit, klik dropdown kategori bertingkat-tingkat. Akhirnya malas mencatat dan tertunda berhari-hari.
+                </p>
+            </div>
+
+            <!-- Problem 2 -->
+            <div class="card-premium p-6 border-t-4 border-t-amber-500 bg-white">
+                <div class="w-11 h-11 rounded-2xl bg-amber-50 text-amber-500 flex items-center justify-center text-2xl mb-4 shadow-sm">
+                    💸
+                </div>
+                <h3 class="font-bold text-sm text-slate-900 leading-snug">"Kok uangnya habis ya? Padahal kayak tidak beli apa-apa"</h3>
+                <p class="text-xs text-slate-500 mt-2.5 leading-relaxed">
+                    Pengeluaran kecil seperti kopi kekinian, parkir, jajan cemilan, dan biaya transfer tak pernah tercatat. Tanpa sadar jumlahnya mencapai ratusan ribu setiap minggu.
+                </p>
+            </div>
+
+            <!-- Problem 3 -->
+            <div class="card-premium p-6 border-t-4 border-t-purple-500 bg-white">
+                <div class="w-11 h-11 rounded-2xl bg-purple-50 text-purple-500 flex items-center justify-center text-2xl mb-4 shadow-sm">
+                    🎯
+                </div>
+                <h3 class="font-bold text-sm text-slate-900 leading-snug">"Udah niat bikin budget, tapi seminggu lupa"</h3>
+                <p class="text-xs text-slate-500 mt-2.5 leading-relaxed">
+                    Budget hanya tersimpan di spreadsheet atau catatan HP tanpa peringatan aktif. Begitu sadar, saldo rekening sudah menipis dan terlambat untuk diperbaiki.
+                </p>
+            </div>
+        </div>
+
+        <!-- Solution Transition Box -->
+        <div class="mt-16 text-center max-w-2xl mx-auto p-8 rounded-3xl bg-gradient-to-tr from-orange-50 via-amber-50/40 to-white border border-orange-200/80 shadow-sm">
+            <span class="text-xs font-bold text-orange-600 uppercase tracking-widest block mb-2">Solusi Modern TataDana</span>
+            <h3 class="text-xl sm:text-2xl font-black text-slate-900">
+                Bagaimana kalau mencatat keuangan semudah kirim pesan ke teman?
+            </h3>
+            <p class="text-xs sm:text-sm text-slate-600 mt-2.5 leading-relaxed">
+                Introducing <b>TataDana</b> — asisten keuangan pribadi cerdas yang tinggal di Telegram kamu. Cukup ketik santai atau jepret struk, sisanya AI yang selesaikan.
+            </p>
+        </div>
+    </div>
+</section>
+
+<!-- =============================================================================
+     4. INTERACTIVE DASHBOARD PREVIEW & TELEGRAM BOT DEMO
+     ============================================================================= -->
+<section id="demo" class="py-24 bg-[#F8FAFC]">
+    <div class="max-w-6xl mx-auto px-4 sm:px-6">
+        <div class="text-center max-w-2xl mx-auto mb-14">
+            <span class="text-xs font-bold text-orange-600 uppercase tracking-widest">Interactive Preview</span>
+            <h2 class="text-3xl sm:text-4xl font-black text-slate-900 mt-2">Coba Langsung Simulasi Bot Telegram</h2>
+            <p class="text-xs sm:text-sm text-slate-600 mt-2">Klik contoh pesan di bawah atau ketik kalimat pengeluaran santaimu sendiri.</p>
+        </div>
+
+        <div class="grid grid-cols-1 lg:grid-cols-2 gap-8 items-start">
+            <!-- Left: Simulated Telegram Smartphone Screen -->
+            <div class="w-full bg-slate-900 rounded-[2.5rem] p-4 sm:p-5 shadow-2xl border-4 border-slate-800 text-white relative">
+                <!-- Phone Top Bar -->
+                <div class="flex items-center justify-between px-3 py-2.5 border-b border-slate-800 text-xs">
+                    <div class="flex items-center gap-3">
+                        <div class="w-8 h-8 rounded-full bg-orange-500 flex items-center justify-center font-black text-xs text-white shadow-md shadow-orange-500/30">
+                            ⚡
+                        </div>
+                        <div>
+                            <div class="font-bold text-white flex items-center gap-1.5">
+                                <span>TataDana Bot</span>
+                                <span class="w-1.5 h-1.5 rounded-full bg-emerald-400"></span>
+                            </div>
+                            <div class="text-[10px] text-emerald-400">bot online • respon instan</div>
+                        </div>
+                    </div>
+                    <span class="text-[10px] text-slate-400 font-mono" id="demo-clock">19:30 WIB</span>
+                </div>
+
+                <!-- Chat Messages Stream -->
+                <div id="landing-chat-stream" class="py-4 space-y-3 h-80 overflow-y-auto px-1 text-xs">
+                    <div class="chat-bubble bg-slate-800 p-3.5 rounded-2xl max-w-[88%] text-slate-200 border border-slate-700/60 leading-relaxed">
+                        👋 <b>Halo! Aku TataDana Bot.</b><br>
+                        Ketik apa saja pengeluaranmu dengan bahasa santai, misal: <code class="text-orange-400 bg-slate-900/60 px-1 py-0.5 rounded">beli kopi susu 25rb</code> atau klik salah satu tombol di bawah:
+                    </div>
+                </div>
+
+                <!-- Quick Action Chips -->
+                <div class="py-2 flex flex-wrap gap-1.5 text-[11px] border-t border-slate-800/80">
+                    <button onclick="sendQuickDemo('Beli kopi susu 25rb', 25000, '🍜 Makanan & Minuman', 'expense')" class="px-2.5 py-1 rounded-full bg-slate-800 hover:bg-slate-700 text-slate-300 hover:text-white transition-colors border border-slate-700">
+                        ☕ Kopi 25rb
+                    </button>
+                    <button onclick="sendQuickDemo('Isi bensin pertamax 50k', 50000, '🚗 Transportasi', 'expense')" class="px-2.5 py-1 rounded-full bg-slate-800 hover:bg-slate-700 text-slate-300 hover:text-white transition-colors border border-slate-700">
+                        ⛽ Bensin 50k
+                    </button>
+                    <button onclick="sendQuickDemo('Gajian freelance 1.5jt', 1500000, '💼 Pendapatan', 'income')" class="px-2.5 py-1 rounded-full bg-slate-800 hover:bg-slate-700 text-emerald-400 hover:text-emerald-300 transition-colors border border-slate-700">
+                        💰 Gaji 1.5jt
+                    </button>
+                    <button onclick="sendQuickDemo('Foto struk Indomaret 146rb', 146000, '🛒 Belanja Bulanan', 'expense')" class="px-2.5 py-1 rounded-full bg-slate-800 hover:bg-slate-700 text-amber-400 hover:text-amber-300 transition-colors border border-slate-700">
+                        🧾 Struk 146rb
+                    </button>
+                    <button onclick="sendQuickDemo('/saldo', 0, 'Info Saldo', 'saldo')" class="px-2.5 py-1 rounded-full bg-slate-800 hover:bg-slate-700 text-purple-400 hover:text-purple-300 transition-colors border border-slate-700">
+                        💳 /saldo
+                    </button>
+                </div>
+
+                <!-- Input Box -->
+                <div class="pt-2 flex gap-2">
+                    <input type="text" id="landing-chat-input" placeholder="Ketik misal: makan sate ayam 35rb" onkeydown="if(event.key==='Enter') sendLandingChat()" class="flex-1 bg-slate-800 border border-slate-700 rounded-xl px-3.5 py-2.5 text-xs text-white focus:outline-none focus:border-orange-500 focus:ring-1 focus:ring-orange-500">
+                    <button onclick="sendLandingChat()" class="btn-primary px-4 py-2.5 rounded-xl text-xs font-bold shrink-0">Kirim</button>
+                </div>
+            </div>
+
+            <!-- Right: Interactive Live Dashboard Preview Card -->
+            <div class="space-y-5">
+                <div class="p-6 rounded-3xl bg-white border border-slate-200 shadow-sm relative overflow-hidden">
+                    <div class="flex items-center justify-between pb-4 border-b border-slate-100">
+                        <div>
+                            <span class="text-[10px] font-bold text-slate-400 uppercase tracking-wider block">Live Dashboard Sync</span>
+                            <h3 class="text-base font-extrabold text-slate-900">Ringkasan Dompet & Budget Anda</h3>
+                        </div>
+                        <span class="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-[10px] font-bold bg-emerald-50 text-emerald-700 border border-emerald-200">
+                            <span class="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse"></span>
+                            Tersinkronisasi
+                        </span>
+                    </div>
+
+                    <!-- 3 Live Numbers -->
+                    <div class="grid grid-cols-3 gap-3 my-5 text-center">
+                        <div class="p-3 rounded-2xl bg-slate-50 border border-slate-100">
+                            <span class="text-[10px] font-bold text-slate-500 block">Total Saldo</span>
+                            <span id="demo-balance" class="text-sm sm:text-base font-black text-slate-900 mt-1 block">Rp 4.250.000</span>
+                        </div>
+                        <div class="p-3 rounded-2xl bg-emerald-50/60 border border-emerald-100">
+                            <span class="text-[10px] font-bold text-emerald-700 block">Pemasukan</span>
+                            <span id="demo-income" class="text-sm sm:text-base font-black text-emerald-600 mt-1 block">Rp 7.500.000</span>
+                        </div>
+                        <div class="p-3 rounded-2xl bg-rose-50/60 border border-rose-100">
+                            <span class="text-[10px] font-bold text-rose-700 block">Pengeluaran</span>
+                            <span id="demo-expense" class="text-sm sm:text-base font-black text-rose-600 mt-1 block">Rp 3.250.000</span>
+                        </div>
+                    </div>
+
+                    <!-- Visual Category Progress Bar -->
+                    <div class="space-y-3 pt-2">
+                        <div>
+                            <div class="flex justify-between text-xs font-semibold text-slate-700 mb-1">
+                                <span>🍜 Makanan & Minuman</span>
+                                <span id="demo-cat-food">Rp 1.250.000 / Rp 2.500.000 (50%)</span>
+                            </div>
+                            <div class="w-full bg-slate-100 rounded-full h-2.5 overflow-hidden">
+                                <div id="demo-bar-food" class="bg-orange-500 h-2.5 rounded-full transition-all duration-500" style="width: 50%"></div>
+                            </div>
+                        </div>
+
+                        <div>
+                            <div class="flex justify-between text-xs font-semibold text-slate-700 mb-1">
+                                <span>🚗 Transportasi & Bensin</span>
+                                <span id="demo-cat-trans">Rp 450.000 / Rp 1.000.000 (45%)</span>
+                            </div>
+                            <div class="w-full bg-slate-100 rounded-full h-2.5 overflow-hidden">
+                                <div id="demo-bar-trans" class="bg-blue-500 h-2.5 rounded-full transition-all duration-500" style="width: 45%"></div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- 3 Key Value Props -->
+                <div class="grid grid-cols-1 sm:grid-cols-3 gap-4">
+                    <div class="p-4 rounded-2xl bg-white border border-slate-200/80 shadow-sm">
+                        <span class="text-orange-600 font-extrabold text-xs block mb-1">1. NLP Indonesia</span>
+                        <p class="text-[11px] text-slate-600 leading-relaxed">
+                            Mengenali otomatis singkatan <code>15rb</code>, <code>50k</code>, dan <code>1.5jt</code>.
+                        </p>
+                    </div>
+                    <div class="p-4 rounded-2xl bg-white border border-slate-200/80 shadow-sm">
+                        <span class="text-emerald-600 font-extrabold text-xs block mb-1">2. Visual Bar</span>
+                        <p class="text-[11px] text-slate-600 leading-relaxed">
+                            Reply Telegram menampilkan progress bar budget: <code>[████░░░░] 50%</code>.
+                        </p>
+                    </div>
+                    <div class="p-4 rounded-2xl bg-white border border-slate-200/80 shadow-sm">
+                        <span class="text-purple-600 font-extrabold text-xs block mb-1">3. Real-time RLS</span>
+                        <p class="text-[11px] text-slate-600 leading-relaxed">
+                            Data tersimpan instan dan terisolasi dengan Supabase Row Level Security.
+                        </p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</section>
+
+<!-- =============================================================================
+     5. FITUR ALTERNATING LAYOUT (3 FITUR UTAMA)
+     ============================================================================= -->
+<section id="fitur" class="py-24 bg-white">
+    <div class="max-w-6xl mx-auto px-4 sm:px-6 space-y-24">
+        <!-- Fitur 1: Catat via Telegram (Teks, Suara, Foto Struk) -->
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-12 items-center">
+            <div>
+                <span class="text-xs font-bold text-orange-600 uppercase tracking-widest">Fitur Unggulan #1</span>
+                <h3 class="text-2xl sm:text-3xl font-black text-slate-900 mt-2">
+                    Catat via Telegram — Teks, Voice Note, & Foto Struk
+                </h3>
+                <p class="text-xs sm:text-sm text-slate-600 mt-4 leading-relaxed">
+                    Tidak perlu download aplikasi baru yang berat dan jarang dibuka. Cukup kirim chat santai, rekam voice note saat mengemudi, atau jepret foto struk kasir Indomaret/Alfamart. AI Vision kami mengekstrak nama merchant, rincian barang, dan nominal total secara otomatis.
+                </p>
+                <ul class="mt-6 space-y-3 text-xs text-slate-700 font-semibold">
+                    <li class="flex items-center gap-2.5">
+                        <span class="w-5 h-5 rounded-full bg-orange-100 text-orange-600 flex items-center justify-center text-xs shrink-0">✓</span>
+                        <span>Parsing otomatis format mata uang Indonesia (rb, k, jt, perak)</span>
+                    </li>
+                    <li class="flex items-center gap-2.5">
+                        <span class="w-5 h-5 rounded-full bg-orange-100 text-orange-600 flex items-center justify-center text-xs shrink-0">✓</span>
+                        <span>Transkripsi suara otomatis dari Voice Note (maksimal 60 detik)</span>
+                    </li>
+                    <li class="flex items-center gap-2.5">
+                        <span class="w-5 h-5 rounded-full bg-orange-100 text-orange-600 flex items-center justify-center text-xs shrink-0">✓</span>
+                        <span>OCR AI Vision struk belanja multi-item lengkap dengan breakdown</span>
+                    </li>
+                </ul>
+            </div>
+            <div class="card-premium p-6 sm:p-8 bg-gradient-to-tr from-orange-50/70 via-white to-white border border-orange-200/70 shadow-lg">
+                <div class="space-y-4 font-mono text-xs">
+                    <div class="p-3.5 bg-white rounded-2xl shadow-sm border border-slate-200/80">
+                        <span class="text-slate-400 block text-[10px] uppercase font-bold">Chat Pengguna Telegram:</span>
+                        <span class="font-bold text-slate-900 mt-0.5 block">"makan siang sate padang dan es jeruk 35rb"</span>
+                    </div>
+                    <div class="p-4 bg-white rounded-2xl shadow-sm border border-orange-200 text-slate-800 space-y-1">
+                        <span class="text-orange-600 font-bold block text-[11px] mb-1">⚡ TataDana Bot Reply:</span>
+                        <div class="text-slate-700">💸 <b>Pengeluaran tercatat!</b></div>
+                        <div>├ Nominal : <b>Rp35.000</b></div>
+                        <div>├ Kategori : 🍜 Makanan & Minuman</div>
+                        <div>├ Dompet : 👛 Dompet Utama (Cash)</div>
+                        <div>└ Saldo Baru : <b>Rp1.215.000</b></div>
+                        <div class="pt-2 text-[11px] text-slate-500 font-sans">
+                            📊 <b>Budget Makanan:</b> [██████░░░░] 60% — sisa Rp800.000
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Fitur 2: Laporan & Export Otomatis -->
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-12 items-center">
+            <div class="order-2 md:order-1 card-premium p-6 sm:p-8 bg-gradient-to-tr from-blue-50/70 via-white to-white border border-blue-200/70 shadow-lg">
+                <div class="space-y-3.5 text-xs">
+                    <div class="flex items-center justify-between p-4 bg-white rounded-2xl shadow-sm border border-slate-200/80">
+                        <div class="flex items-center gap-3">
+                            <span class="p-2 rounded-xl bg-emerald-50 text-emerald-600"><i data-lucide="file-spreadsheet" class="w-5 h-5"></i></span>
+                            <div>
+                                <span class="font-bold text-slate-900 block">Laporan_Keuangan_Oktober.xlsx</span>
+                                <span class="text-[10px] text-slate-400">Microsoft Excel • Format Rinci</span>
+                            </div>
+                        </div>
+                        <span class="px-2.5 py-1 rounded-full text-[10px] font-bold bg-emerald-100 text-emerald-800">Siap Unduh</span>
+                    </div>
+                    <div class="flex items-center justify-between p-4 bg-white rounded-2xl shadow-sm border border-slate-200/80">
+                        <div class="flex items-center gap-3">
+                            <span class="p-2 rounded-xl bg-orange-50 text-orange-600"><i data-lucide="file-text" class="w-5 h-5"></i></span>
+                            <div>
+                                <span class="font-bold text-slate-900 block">Laporan_Resmi_TataDana.pdf</span>
+                                <span class="text-[10px] text-slate-400">Dokumen PDF Berlogo Resmi</span>
+                            </div>
+                        </div>
+                        <span class="px-2.5 py-1 rounded-full text-[10px] font-bold bg-orange-100 text-orange-800">Siap Unduh</span>
+                    </div>
+                </div>
+            </div>
+            <div class="order-1 md:order-2">
+                <span class="text-xs font-bold text-blue-600 uppercase tracking-widest">Fitur Unggulan #2</span>
+                <h3 class="text-2xl sm:text-3xl font-black text-slate-900 mt-2">
+                    Laporan & Ekspor Otomatis di Dashboard Web
+                </h3>
+                <p class="text-xs sm:text-sm text-slate-600 mt-4 leading-relaxed">
+                    Lihat tabel transaksi lengkap dengan sorting, pagination, dan filter mendalam per kategori atau rentang tanggal. Butuh laporan untuk pembukuan freelance, klaim kantor, atau evaluasi anggaran bersama pasangan? Unduh langsung dokumen Excel (.xlsx) atau PDF resmi hanya dalam satu klik.
+                </p>
+                <ul class="mt-6 space-y-3 text-xs text-slate-700 font-semibold">
+                    <li class="flex items-center gap-2.5">
+                        <span class="w-5 h-5 rounded-full bg-blue-100 text-blue-600 flex items-center justify-center text-xs shrink-0">✓</span>
+                        <span>Filter periode dinamis (Minggu Ini, Bulan Ini, Kustom)</span>
+                    </li>
+                    <li class="flex items-center gap-2.5">
+                        <span class="w-5 h-5 rounded-full bg-blue-100 text-blue-600 flex items-center justify-center text-xs shrink-0">✓</span>
+                        <span>Rincian item foto struk dapat di-expand dan diverifikasi</span>
+                    </li>
+                    <li class="flex items-center gap-2.5">
+                        <span class="w-5 h-5 rounded-full bg-blue-100 text-blue-600 flex items-center justify-center text-xs shrink-0">✓</span>
+                        <span>Riwayat unduhan tersimpan aman di Supabase Storage</span>
+                    </li>
+                </ul>
+            </div>
+        </div>
+
+        <!-- Fitur 3: AI Financial Advisor -->
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-12 items-center">
+            <div>
+                <span class="text-xs font-bold text-purple-600 uppercase tracking-widest">Fitur Unggulan #3</span>
+                <h3 class="text-2xl sm:text-3xl font-black text-slate-900 mt-2">
+                    AI Financial Advisor & Peringatan Otomatis
+                </h3>
+                <p class="text-xs sm:text-sm text-slate-600 mt-4 leading-relaxed">
+                    TataDana bukan sekadar buku kas pasif yang menunggu Anda input data. Algoritma kami menganalisis kebiasaan finansial Anda secara proaktif: jika ada transaksi yang menghabiskan lebih dari 20% budget kategori atau pengeluaran mingguan melonjak 50%, bot langsung mengirimkan peringatan dan saran actionable.
+                </p>
+                <ul class="mt-6 space-y-3 text-xs text-slate-700 font-semibold">
+                    <li class="flex items-center gap-2.5">
+                        <span class="w-5 h-5 rounded-full bg-purple-100 text-purple-600 flex items-center justify-center text-xs shrink-0">✓</span>
+                        <span>Deteksi dini lonjakan pengeluaran kategori yang tidak wajar</span>
+                    </li>
+                    <li class="flex items-center gap-2.5">
+                        <span class="w-5 h-5 rounded-full bg-purple-100 text-purple-600 flex items-center justify-center text-xs shrink-0">✓</span>
+                        <span>Notifikasi otomatis saat budget mencapai 80% & 100%</span>
+                    </li>
+                    <li class="flex items-center gap-2.5">
+                        <span class="w-5 h-5 rounded-full bg-purple-100 text-purple-600 flex items-center justify-center text-xs shrink-0">✓</span>
+                        <span>Rekomendasi penyesuaian gaya hidup yang realistis dan ramah</span>
+                    </li>
+                </ul>
+            </div>
+            <div class="card-premium p-6 sm:p-8 bg-gradient-to-tr from-purple-50/70 via-white to-white border border-purple-200/70 shadow-lg">
+                <div class="p-5 bg-white rounded-2xl shadow-sm border border-purple-200 text-xs text-slate-800 space-y-3">
+                    <div class="font-bold text-purple-700 flex items-center justify-between">
+                        <span class="flex items-center gap-1.5">
+                            <span>🤖 Peringatan Cerdas AI</span>
+                        </span>
+                        <span class="text-[10px] bg-purple-100 text-purple-800 px-2 py-0.5 rounded-full">Proaktif</span>
+                    </div>
+                    <p class="text-slate-600 leading-relaxed">
+                        "Perhatian: Pengeluaran <b>Makanan & Minuman</b> minggu ini telah mencapai <b>Rp1.450.000</b> (naik 58% dari minggu lalu)."
+                    </p>
+                    <div class="text-purple-950 font-medium bg-purple-50/80 p-3.5 rounded-xl border border-purple-100">
+                        💡 <b>Saran Tindakan:</b> Masak sendiri untuk 3 hari ke depan agar sisa budget Rp1.050.000 tetap bertahan aman hingga tanggal gajian berikutnya.
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</section>
+
+<!-- =============================================================================
+     6. TESTIMONI (MASONRY GRID PLACEHOLDER)
+     ============================================================================= -->
+<!-- // TODO: ganti dengan testimoni asli -->
+<section class="py-24 bg-[#F8FAFC]">
+    <div class="max-w-6xl mx-auto px-4 sm:px-6">
+        <div class="text-center max-w-2xl mx-auto mb-14">
+            <span class="text-xs font-bold text-orange-600 uppercase tracking-widest">Testimoni Pengguna</span>
+            <h2 class="text-3xl sm:text-4xl font-black text-slate-900 mt-2">Disukai Karyawan & Freelancer Indonesia</h2>
+            <p class="text-xs sm:text-sm text-slate-500 mt-2">Cerita awal dari para pengguna awal yang terbantu mengontrol pengeluaran gajinya.</p>
+        </div>
+
+        <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
+            <!-- Review 1 -->
+            <div class="card-premium p-6 flex flex-col justify-between bg-white">
+                <div>
+                    <div class="text-amber-400 text-sm mb-3">★★★★★</div>
+                    <p class="text-xs text-slate-600 leading-relaxed italic">
+                        "Dulu tiap akhir bulan bingung kenapa gaji UMR saya selalu sisa nol. Sejak pakai TataDana di Telegram, tiap beli boba atau jajan langsung ketik 15rb. Sekarang bisa nabung minimal 20% tiap bulan!"
+                    </p>
+                </div>
+                <div class="mt-5 pt-4 border-t border-slate-100 flex items-center gap-3">
+                    <div class="w-9 h-9 rounded-full bg-orange-100 text-orange-600 flex items-center justify-center font-bold text-xs shrink-0">AP</div>
+                    <div>
+                        <div class="font-bold text-xs text-slate-900">Anisa Putri</div>
+                        <div class="text-[10px] text-slate-400">Karyawan Swasta, Jakarta</div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Review 2 -->
+            <div class="card-premium p-6 flex flex-col justify-between bg-white">
+                <div>
+                    <div class="text-amber-400 text-sm mb-3">★★★★★</div>
+                    <p class="text-xs text-slate-600 leading-relaxed italic">
+                        "Sebagai freelancer dengan penghasilan yang tidak tentu, fitur multi-dompet dan bot yang bisa membedakan proyekan vs operasional sangat membantu. Tinggal kirim VN sambil nyetir langsung tercatat rapi!"
+                    </p>
+                </div>
+                <div class="mt-5 pt-4 border-t border-slate-100 flex items-center gap-3">
+                    <div class="w-9 h-9 rounded-full bg-blue-100 text-blue-600 flex items-center justify-center font-bold text-xs shrink-0">RP</div>
+                    <div>
+                        <div class="font-bold text-xs text-slate-900">Rizky Pratama</div>
+                        <div class="text-[10px] text-slate-400">Freelance Web Designer, Bandung</div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Review 3 -->
+            <div class="card-premium p-6 flex flex-col justify-between bg-white">
+                <div>
+                    <div class="text-amber-400 text-sm mb-3">★★★★★</div>
+                    <p class="text-xs text-slate-600 leading-relaxed italic">
+                        "Fitur scan foto struknya juara banget di paket Pro! Habis belanja bulanan di supermarket tinggal foto, AI langsung pisah beras, minyak, dan sabun ke kategori masing-masing tanpa pusing ngetik."
+                    </p>
+                </div>
+                <div class="mt-5 pt-4 border-t border-slate-100 flex items-center gap-3">
+                    <div class="w-9 h-9 rounded-full bg-emerald-100 text-emerald-600 flex items-center justify-center font-bold text-xs shrink-0">DW</div>
+                    <div>
+                        <div class="font-bold text-xs text-slate-900">Dewi Wulandari</div>
+                        <div class="text-[10px] text-slate-400">Ibu Rumah Tangga & Pebisnis, Surabaya</div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Review 4 -->
+            <div class="card-premium p-6 flex flex-col justify-between bg-white">
+                <div>
+                    <div class="text-amber-400 text-sm mb-3">★★★★★</div>
+                    <p class="text-xs text-slate-600 leading-relaxed italic">
+                        "Udah coba puluhan aplikasi keuangan di Play Store, semuanya ditinggalin setelah seminggu karena ribet. Cuma TataDana yang tahan lama karena tinggal kirim chat di Telegram yang tiap hari dibuka."
+                    </p>
+                </div>
+                <div class="mt-5 pt-4 border-t border-slate-100 flex items-center gap-3">
+                    <div class="w-9 h-9 rounded-full bg-purple-100 text-purple-600 flex items-center justify-center font-bold text-xs shrink-0">FK</div>
+                    <div>
+                        <div class="font-bold text-xs text-slate-900">Fajar Kusuma</div>
+                        <div class="text-[10px] text-slate-400">Software Engineer, Yogyakarta</div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Review 5 -->
+            <div class="card-premium p-6 flex flex-col justify-between bg-white">
+                <div>
+                    <div class="text-amber-400 text-sm mb-3">★★★★★</div>
+                    <p class="text-xs text-slate-600 leading-relaxed italic">
+                        "Paling suka waktu mau transfer antar dompet e-wallet ke rekening bank, saldonya langsung terpotong dan tertambah secara atomik. Laporan Excel-nya juga rapi buat laporan bulanan keluarga."
+                    </p>
+                </div>
+                <div class="mt-5 pt-4 border-t border-slate-100 flex items-center gap-3">
+                    <div class="w-9 h-9 rounded-full bg-rose-100 text-rose-600 flex items-center justify-center font-bold text-xs shrink-0">SN</div>
+                    <div>
+                        <div class="font-bold text-xs text-slate-900">Siti Nurhaliza</div>
+                        <div class="text-[10px] text-slate-400">Digital Marketer, Semarang</div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Review 6 -->
+            <div class="card-premium p-6 flex flex-col justify-between bg-white">
+                <div>
+                    <div class="text-amber-400 text-sm mb-3">★★★★★</div>
+                    <p class="text-xs text-slate-600 leading-relaxed italic">
+                        "Beli paket Pro sekali bayar Rp99.000 itu keputusan terbaik tahun ini. Nggak ada biaya langganan bulanan lagi dan fitur AI advisor-nya beneran ngingetin pas jajan berlebihan."
+                    </p>
+                </div>
+                <div class="mt-5 pt-4 border-t border-slate-100 flex items-center gap-3">
+                    <div class="w-9 h-9 rounded-full bg-amber-100 text-amber-600 flex items-center justify-center font-bold text-xs shrink-0">BA</div>
+                    <div>
+                        <div class="font-bold text-xs text-slate-900">Bagus Anggoro</div>
+                        <div class="text-[10px] text-slate-400">Content Creator, Bali</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</section>
+
+<!-- =============================================================================
+     7. PRICING TABLE (2 KOLOM: STARTER VS PRO)
+     ============================================================================= -->
+<section id="harga" class="py-24 bg-white">
+    <div class="max-w-5xl mx-auto px-4 sm:px-6">
+        <div class="text-center max-w-2xl mx-auto mb-14">
+            <span class="text-xs font-bold text-orange-600 uppercase tracking-widest">Pilihan Paket Investasi</span>
+            <h2 class="text-3xl sm:text-4xl font-black text-slate-900 mt-2">Investasi Terbaik untuk Finansialmu</h2>
+            <p class="text-xs sm:text-sm text-slate-600 mt-2">Mulai dengan paket Starter bulanan atau nikmati paket Pro sekali bayar tanpa batas selamanya.</p>
+        </div>
+
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-8 items-stretch max-w-4xl mx-auto">
+            <!-- Paket 1: Starter -->
+            <div class="card-premium p-8 rounded-3xl border border-slate-200 flex flex-col justify-between bg-white">
+                <div>
+                    <div class="flex items-center justify-between">
+                        <span class="text-xs font-bold text-slate-400 uppercase tracking-wider">Pemula & Mahasiswa</span>
+                        <span class="text-[10px] font-bold px-2 py-0.5 rounded-full bg-slate-100 text-slate-600">Bulanan</span>
+                    </div>
+                    <h3 class="text-xl font-black text-slate-900 mt-2">Paket Starter</h3>
+                    <div class="mt-4 flex items-baseline gap-1">
+                        <span class="text-3xl sm:text-4xl font-black text-slate-900">Rp 49.000</span>
+                        <span class="text-xs text-slate-500 font-semibold">/ bulan</span>
+                    </div>
+                    <p class="text-xs text-slate-500 mt-2">Pilihan pas untuk kebutuhan pencatatan harian dasar via Telegram.</p>
+
+                    <div class="mt-6 pt-6 border-t border-slate-100 space-y-3.5 text-xs text-slate-700">
+                        <div class="flex items-center gap-2.5 font-medium">
+                            <span class="text-emerald-600 font-bold">✓</span>
+                            <span>Catat transaksi via teks Telegram santai</span>
+                        </div>
+                        <div class="flex items-center gap-2.5 font-medium">
+                            <span class="text-emerald-600 font-bold">✓</span>
+                            <span>Maksimal <b>50 transaksi</b> per bulan</span>
+                        </div>
+                        <div class="flex items-center gap-2.5 font-medium">
+                            <span class="text-emerald-600 font-bold">✓</span>
+                            <span>Maksimal <b>3 dompet</b> & 5 kategori budget</span>
+                        </div>
+                        <div class="flex items-center gap-2.5 font-medium">
+                            <span class="text-emerald-600 font-bold">✓</span>
+                            <span>Dashboard web & ringkasan saldo bulanan</span>
+                        </div>
+                        <div class="flex items-center gap-2.5 font-medium text-slate-400">
+                            <span>✕</span>
+                            <span>Tanpa scan foto struk belanja OCR</span>
+                        </div>
+                        <div class="flex items-center gap-2.5 font-medium text-slate-400">
+                            <span>✕</span>
+                            <span>Tanpa AI Financial Advisor proaktif</span>
+                        </div>
+                        <div class="flex items-center gap-2.5 font-medium text-slate-400">
+                            <span>✕</span>
+                            <span>Tanpa export file PDF & Excel resmi</span>
+                        </div>
+                    </div>
+                </div>
+
+                <a href="/register?plan=starter" class="w-full mt-8 py-3.5 rounded-xl border border-slate-200 hover:bg-slate-50 text-slate-700 font-bold text-xs text-center transition-colors">
+                    Pilih Paket Starter
+                </a>
+            </div>
+
+            <!-- Paket 2: Pro (Featured Lifetime) -->
+            <div class="card-premium p-8 rounded-3xl border-2 border-orange-500 bg-gradient-to-b from-orange-50/40 via-white to-white flex flex-col justify-between relative shadow-xl shadow-orange-500/10">
+                <span class="absolute -top-3.5 right-6 px-3.5 py-1 rounded-full text-[10px] font-black bg-gradient-to-r from-orange-600 to-amber-500 text-white uppercase tracking-wider shadow-md">
+                    Paling Hemat & Populer
+                </span>
+
+                <div>
+                    <div class="flex items-center justify-between">
+                        <span class="text-xs font-bold text-orange-600 uppercase tracking-wider">Akses Penuh Selamanya</span>
+                        <span class="text-[10px] font-bold px-2 py-0.5 rounded-full bg-orange-100 text-orange-800">Lifetime</span>
+                    </div>
+                    <h3 class="text-xl font-black text-slate-900 mt-2">TataDana Pro</h3>
+                    <div class="mt-4 flex items-baseline gap-1">
+                        <span class="text-3xl sm:text-4xl font-black text-orange-600">Rp 99.000</span>
+                        <span class="text-xs text-slate-600 font-bold">Sekali Bayar</span>
+                    </div>
+                    <p class="text-xs text-slate-500 mt-2">Beli sekali untuk akses seumur hidup, tanpa tagihan bulanan berulang.</p>
+
+                    <div class="mt-6 pt-6 border-t border-slate-100 space-y-3.5 text-xs text-slate-800 font-medium">
+                        <div class="flex items-center gap-2.5">
+                            <span class="text-orange-600 font-bold">✓</span>
+                            <span><b>Unlimited</b> transaksi setiap bulan</span>
+                        </div>
+                        <div class="flex items-center gap-2.5">
+                            <span class="text-orange-600 font-bold">✓</span>
+                            <span><b>Unlimited</b> dompet & kategori budget</span>
+                        </div>
+                        <div class="flex items-center gap-2.5">
+                            <span class="text-orange-600 font-bold">✓</span>
+                            <span><b>Input via Foto Struk Belanja (AI Vision)</b></span>
+                        </div>
+                        <div class="flex items-center gap-2.5">
+                            <span class="text-orange-600 font-bold">✓</span>
+                            <span><b>AI Financial Advisor & Peringatan Otomatis</b></span>
+                        </div>
+                        <div class="flex items-center gap-2.5">
+                            <span class="text-orange-600 font-bold">✓</span>
+                            <span><b>Export Dokumen Excel & PDF Tanpa Batas</b></span>
+                        </div>
+                        <div class="flex items-center gap-2.5">
+                            <span class="text-orange-600 font-bold">✓</span>
+                            <span>Voice Note transkripsi STT otomatis</span>
+                        </div>
+                        <div class="flex items-center gap-2.5">
+                            <span class="text-orange-600 font-bold">✓</span>
+                            <span>Prioritas jalur failover model AI dan bantuan 24/7</span>
+                        </div>
+                    </div>
+                </div>
+
+                <a href="/register?plan=pro" class="btn-primary w-full mt-8 py-3.5 rounded-xl text-xs font-bold text-center shadow-lg shadow-orange-500/25">
+                    Mulai dengan Pro Sekarang &rarr;
+                </a>
+            </div>
+        </div>
+    </div>
+</section>
+
+<!-- =============================================================================
+     8. FAQ SECTION (MINIMAL 7 PERTANYAAN RELEVAN)
+     ============================================================================= -->
+<section id="faq" class="py-24 bg-[#F8FAFC]">
+    <div class="max-w-4xl mx-auto px-4 sm:px-6">
+        <div class="text-center mb-14">
+            <span class="text-xs font-bold text-orange-600 uppercase tracking-widest">Pertanyaan Umum</span>
+            <h2 class="text-3xl font-black text-slate-900 mt-2">Frequently Asked Questions</h2>
+            <p class="text-xs sm:text-sm text-slate-500 mt-2">Jawaban lengkap seputar fitur, keamanan data, dan cara penggunaan TataDana.</p>
+        </div>
+
+        <div class="space-y-3.5">
+            <!-- FAQ 1 -->
+            <div class="card-premium rounded-2xl border border-slate-200 bg-white overflow-hidden">
+                <button onclick="toggleFaq(1)" class="w-full p-5 text-left font-bold text-sm text-slate-900 flex items-center justify-between gap-4 focus:outline-none">
+                    <span>1. Apakah fitur foto struk bisa dipakai di paket Starter?</span>
+                    <span id="faq-icon-1" class="text-orange-500 text-lg font-bold">+</span>
+                </button>
+                <div id="faq-answer-1" class="faq-answer px-5 pb-5 text-xs text-slate-600 leading-relaxed border-t border-slate-100/60 pt-3">
+                    Fitur scan foto struk belanja menggunakan teknologi AI Vision eksklusif tersedia untuk pengguna paket <b>Pro</b>. Pada paket Starter, Anda tetap dapat mencatat keuangan dengan sangat praktis melalui pesan teks santai maupun rekaman suara Voice Note Telegram.
+                </div>
+            </div>
+
+            <!-- FAQ 2 -->
+            <div class="card-premium rounded-2xl border border-slate-200 bg-white overflow-hidden">
+                <button onclick="toggleFaq(2)" class="w-full p-5 text-left font-bold text-sm text-slate-900 flex items-center justify-between gap-4 focus:outline-none">
+                    <span>2. Bagaimana TataDana menjamin keamanan dan privasi data keuangan saya?</span>
+                    <span id="faq-icon-2" class="text-orange-500 text-lg font-bold">+</span>
+                </button>
+                <div id="faq-answer-2" class="faq-answer px-5 pb-5 text-xs text-slate-600 leading-relaxed border-t border-slate-100/60 pt-3">
+                    Data transaksi Anda disimpan di database PostgreSQL Supabase dengan perlindungan <b>Row Level Security (RLS)</b>. Tidak ada pengguna lain yang dapat membaca atau mengubah data milik Anda. Kunci API dan token bot dienkripsi dengan standar Fernet AES-128. Kami tidak pernah menjual atau membagikan riwayat keuangan Anda kepada pengiklan pihak ketiga.
+                </div>
+            </div>
+
+            <!-- FAQ 3 -->
+            <div class="card-premium rounded-2xl border border-slate-200 bg-white overflow-hidden">
+                <button onclick="toggleFaq(3)" class="w-full p-5 text-left font-bold text-sm text-slate-900 flex items-center justify-between gap-4 focus:outline-none">
+                    <span>3. Bagaimana format input teks saat chat ke Bot Telegram?</span>
+                    <span id="faq-icon-3" class="text-orange-500 text-lg font-bold">+</span>
+                </button>
+                <div id="faq-answer-3" class="faq-answer px-5 pb-5 text-xs text-slate-600 leading-relaxed border-t border-slate-100/60 pt-3">
+                    Sangat fleksibel dan alami! Anda tidak perlu mengingat sintaks kaku. Anda bisa mengetik: <code>"beli bensin 50rb"</code>, <code>"makan siang nasi padang 35k"</code>, <code>"gaji freelance 2jt"</code>, atau <code>"parkir mobil 5000"</code>. AI TataDana otomatis mendeteksi kategori, nominal, dan dompet yang sesuai.
+                </div>
+            </div>
+
+            <!-- FAQ 4 -->
+            <div class="card-premium rounded-2xl border border-slate-200 bg-white overflow-hidden">
+                <button onclick="toggleFaq(4)" class="w-full p-5 text-left font-bold text-sm text-slate-900 flex items-center justify-between gap-4 focus:outline-none">
+                    <span>4. Bagaimana cara menghubungkan akun Telegram dengan akun TataDana saya?</span>
+                    <span id="faq-icon-4" class="text-orange-500 text-lg font-bold">+</span>
+                </button>
+                <div id="faq-answer-4" class="faq-answer px-5 pb-5 text-xs text-slate-600 leading-relaxed border-t border-slate-100/60 pt-3">
+                    Cukup masuk ke menu <b>Pengaturan Akun</b> di Dashboard web TataDana, klik tombol <i>"Buat Kode Penautan Telegram"</i>. Anda akan menerima kode angka 6-digit acak yang berlaku selama 10 menit. Kirim kode tersebut ke bot Telegram resmi TataDana, dan akun Anda akan langsung terhubung secara otomatis dan aman.
+                </div>
+            </div>
+
+            <!-- FAQ 5 -->
+            <div class="card-premium rounded-2xl border border-slate-200 bg-white overflow-hidden">
+                <button onclick="toggleFaq(5)" class="w-full p-5 text-left font-bold text-sm text-slate-900 flex items-center justify-between gap-4 focus:outline-none">
+                    <span>5. Apakah TataDana mendukung banyak dompet (multi-wallet) dan transfer saldo?</span>
+                    <span id="faq-icon-5" class="text-orange-500 text-lg font-bold">+</span>
+                </button>
+                <div id="faq-answer-5" class="faq-answer px-5 pb-5 text-xs text-slate-600 leading-relaxed border-t border-slate-100/60 pt-3">
+                    Ya! Anda dapat mengelola dompet Rekening Bank (BCA, Mandiri, BRI, dll), E-Wallet (GoPay, OVO, Dana), hingga Dompet Tunai (Cash). Fitur transfer saldo internal dijalankan secara atomik, sehingga saldo dompet asal dan tujuan selalu sinkron tanpa risiko salah satu sisi gagal tersimpan.
+                </div>
+            </div>
+
+            <!-- FAQ 6 -->
+            <div class="card-premium rounded-2xl border border-slate-200 bg-white overflow-hidden">
+                <button onclick="toggleFaq(6)" class="w-full p-5 text-left font-bold text-sm text-slate-900 flex items-center justify-between gap-4 focus:outline-none">
+                    <span>6. Apakah ada batasan jumlah transaksi per bulan?</span>
+                    <span id="faq-icon-6" class="text-orange-500 text-lg font-bold">+</span>
+                </button>
+                <div id="faq-answer-6" class="faq-answer px-5 pb-5 text-xs text-slate-600 leading-relaxed border-t border-slate-100/60 pt-3">
+                    Pada paket <b>Starter</b>, terdapat kuota hingga 50 transaksi per bulan. Pada paket <b>Pro</b>, transaksi sepenuhnya <b>Unlimited (tanpa batas)</b> sehingga Anda bebas mencatat transaksi sebanyak apa pun setiap hari.
+                </div>
+            </div>
+
+            <!-- FAQ 7 -->
+            <div class="card-premium rounded-2xl border border-slate-200 bg-white overflow-hidden">
+                <button onclick="toggleFaq(7)" class="w-full p-5 text-left font-bold text-sm text-slate-900 flex items-center justify-between gap-4 focus:outline-none">
+                    <span>7. Bagaimana jika saya mengalami kendala teknis atau butuh bantuan?</span>
+                    <span id="faq-icon-7" class="text-orange-500 text-lg font-bold">+</span>
+                </button>
+                <div id="faq-answer-7" class="faq-answer px-5 pb-5 text-xs text-slate-600 leading-relaxed border-t border-slate-100/60 pt-3">
+                    Tim dukungan teknis kami siap membantu Anda melalui email <code>support@tatadana.id</code> dan channel Telegram resmi. Kami juga menyediakan garansi aktivasi cepat dan panduan interaktif ramah pemula di dashboard akun Anda.
+                </div>
+            </div>
+        </div>
+    </div>
+</section>
+
+<!-- =============================================================================
+     9. FINAL CTA BANNER (GRADIENT ORANGE)
+     ============================================================================= -->
+<section class="py-20 bg-gradient-to-r from-orange-600 via-orange-500 to-amber-500 text-white text-center relative overflow-hidden">
+    <!-- Background Glow Circles -->
+    <div class="absolute -top-24 -left-24 w-96 h-96 rounded-full bg-white/10 blur-3xl pointer-events-none"></div>
+    <div class="absolute -bottom-24 -right-24 w-96 h-96 rounded-full bg-amber-400/20 blur-3xl pointer-events-none"></div>
+
+    <div class="max-w-4xl mx-auto px-4 sm:px-6 relative z-10">
+        <h2 class="text-3xl sm:text-4xl lg:text-5xl font-black tracking-tight leading-tight">
+            Mulai Kendalikan Keuanganmu Hari Ini
+        </h2>
+        <p class="text-orange-100 text-sm sm:text-base mt-4 max-w-xl mx-auto leading-relaxed">
+            Bergabunglah dengan ribuan pengguna cerdas yang berhenti cemas di akhir bulan. Catat pengeluaran semudah kirim pesan di Telegram.
+        </p>
+        <div class="mt-8 flex flex-col sm:flex-row items-center justify-center gap-4">
+            <a href="/register" class="w-full sm:w-auto px-8 py-3.5 rounded-2xl bg-white text-orange-600 hover:bg-orange-50 font-black text-sm shadow-xl shadow-orange-950/20 transition-all">
+                Daftar Akun Gratis Sekarang
+            </a>
+            <a href="/login" class="w-full sm:w-auto px-6 py-3.5 rounded-2xl bg-orange-700/40 hover:bg-orange-700/60 text-white font-bold text-sm border border-white/25 transition-all">
+                Masuk ke Akun
+            </a>
+        </div>
+    </div>
+</section>
+
+<!-- =============================================================================
+     10. FOOTER (4 COLUMNS)
+     ============================================================================= -->
+<footer class="bg-white border-t border-slate-200 py-16 text-slate-600 text-xs">
+    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 grid grid-cols-1 md:grid-cols-4 gap-10">
+        <!-- Col 1: Brand Info & Tagline -->
+        <div class="space-y-3.5">
+            <div class="flex items-center gap-2.5">
+                <div class="w-8 h-8 rounded-xl bg-orange-500 text-white flex items-center justify-center font-black text-sm shadow-md shadow-orange-500/20">
+                    T
+                </div>
+                <span class="font-extrabold text-base text-slate-900">Tata<span class="text-orange-500">Dana</span></span>
+            </div>
+            <p class="text-slate-500 leading-relaxed">
+                Platform SaaS fintech cerdas untuk mencatat dan mengendalikan keuangan pribadi semudah chat — langsung dari Telegram kamu.
+            </p>
+            <div class="pt-2 text-[11px] text-slate-400">
+                <span>Zona Waktu Resmi: <b>Asia/Jakarta (WIB)</b></span>
+            </div>
+        </div>
+
+        <!-- Col 2: Produk -->
+        <div>
+            <h4 class="font-bold text-slate-900 uppercase tracking-wider text-[11px] mb-3">Produk</h4>
+            <ul class="space-y-2">
+                <li><a href="#fitur" class="hover:text-orange-600 transition-colors">Catat via Telegram</a></li>
+                <li><a href="#fitur" class="hover:text-orange-600 transition-colors">Scan Struk AI Vision</a></li>
+                <li><a href="#fitur" class="hover:text-orange-600 transition-colors">AI Financial Advisor</a></li>
+                <li><a href="#demo" class="hover:text-orange-600 transition-colors">Demo Interaktif Bot</a></li>
+                <li><a href="#harga" class="hover:text-orange-600 transition-colors">Pilihan Paket Harga</a></li>
+            </ul>
+        </div>
+
+        <!-- Col 3: Perusahaan -->
+        <div>
+            <h4 class="font-bold text-slate-900 uppercase tracking-wider text-[11px] mb-3">Perusahaan</h4>
+            <ul class="space-y-2">
+                <li><a href="#demo" class="hover:text-orange-600 transition-colors">Tentang TataDana</a></li>
+                <li><a href="#harga" class="hover:text-orange-600 transition-colors">Karir</a></li>
+                <li><a href="#faq" class="hover:text-orange-600 transition-colors">Blog Finansial</a></li>
+                <li><a href="mailto:support@tatadana.id" class="hover:text-orange-600 transition-colors">Hubungi Kami (support@tatadana.id)</a></li>
+            </ul>
+        </div>
+
+        <!-- Col 4: Legal & Bantuan -->
+        <div>
+            <h4 class="font-bold text-slate-900 uppercase tracking-wider text-[11px] mb-3">Legal & Bantuan</h4>
+            <ul class="space-y-2">
+                <li><a href="/privacy" class="hover:text-orange-600 transition-colors">Kebijakan Privasi</a></li>
+                <li><a href="/terms" class="hover:text-orange-600 transition-colors">Syarat & Ketentuan</a></li>
+                <li><a href="#faq" class="hover:text-orange-600 transition-colors">Keamanan Data Supabase</a></li>
+                <li><a href="#faq" class="hover:text-orange-600 transition-colors">FAQ Bantuan</a></li>
+            </ul>
+        </div>
+    </div>
+
+    <!-- Bottom Copyright Bar -->
+    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 mt-12 pt-8 border-t border-slate-100 flex flex-col sm:flex-row items-center justify-between gap-4 text-[11px] text-slate-400">
+        <div>&copy; 2026 TataDana. Hak Cipta Dilindungi Undang-Undang. Dibuat dengan bangga untuk Indonesia.</div>
+        <div class="flex items-center gap-4">
+            <span>Infrastruktur Supabase RLS</span>
+            <span>•</span>
+            <span>Integrasi Midtrans</span>
+        </div>
+    </div>
+</footer>
+{% endblock %}
+
+{% block scripts %}
+<script>
+    // 1. Mobile Menu Toggle
+    function toggleMobileMenu() {
+        const menu = document.getElementById("mobile-menu");
+        menu.classList.toggle("hidden");
+    }
+
+    // 2. Interactive Telegram Chat Simulator
+    let currentBalance = 4250000;
+    let currentExpense = 3250000;
+    let currentIncome = 7500000;
+    let foodExpense = 1250000;
+    let transExpense = 450000;
+
+    function formatIDR(amount) {
+        return "Rp " + Math.round(amount).toLocaleString('id-ID');
+    }
+
+    function sendQuickDemo(text, amount, category, type) {
+        const stream = document.getElementById("landing-chat-stream");
+
+        // User Chat Bubble
+        stream.innerHTML += `
+            <div class="chat-bubble bg-orange-500/20 text-orange-200 p-2.5 rounded-2xl ml-auto max-w-[85%] text-right font-medium">
+                ${text}
+            </div>
+        `;
+        stream.scrollTop = stream.scrollHeight;
+
+        // Show typing indicator
+        const typingId = "typing-" + Date.now();
+        stream.innerHTML += `
+            <div id="${typingId}" class="chat-bubble bg-slate-800 p-2.5 rounded-2xl max-w-[50%] text-slate-400 italic text-[11px]">
+                TataDana sedang mengetik...
+            </div>
+        `;
+        stream.scrollTop = stream.scrollHeight;
+
+        setTimeout(() => {
+            const typingElem = document.getElementById(typingId);
+            if (typingElem) typingElem.remove();
+
+            if (type === "saldo") {
+                stream.innerHTML += `
+                    <div class="chat-bubble bg-slate-800 p-3.5 rounded-2xl max-w-[88%] text-slate-200 border border-slate-700 leading-relaxed font-mono">
+                        💳 <b>Informasi Saldo Terkini:</b><br>
+                        ├ 👛 Dompet Utama (Cash) : ${formatIDR(currentBalance * 0.4)}<br>
+                        ├ 🏦 Rekening Bank (BCA) : ${formatIDR(currentBalance * 0.6)}<br>
+                        └ <b>Total Saldo : ${formatIDR(currentBalance)}</b><br><br>
+                        📊 Pengeluaran bulan ini: ${formatIDR(currentExpense)}
+                    </div>
+                `;
+            } else if (type === "income") {
+                currentBalance += amount;
+                currentIncome += amount;
+                updateLiveDashboard();
+                stream.innerHTML += `
+                    <div class="chat-bubble bg-slate-800 p-3.5 rounded-2xl max-w-[88%] text-slate-200 border border-slate-700 leading-relaxed font-mono">
+                        💰 <b class="text-emerald-400">Pemasukan tercatat!</b><br>
+                        ├ Nominal : <b>+${formatIDR(amount)}</b><br>
+                        ├ Kategori : ${category}<br>
+                        ├ Dompet : 🏦 Rekening Bank<br>
+                        └ Saldo Baru : <b>${formatIDR(currentBalance)}</b>
+                    </div>
+                `;
+            } else {
+                currentBalance -= amount;
+                currentExpense += amount;
+                if (category.includes("Makanan") || category.includes("Belanja")) {
+                    foodExpense += amount;
+                } else if (category.includes("Transportasi")) {
+                    transExpense += amount;
+                }
+                updateLiveDashboard();
+
+                const percent = Math.min(100, Math.round((foodExpense / 2500000) * 100));
+                const barFilled = Math.round(percent / 10);
+                const barEmpty = 10 - barFilled;
+                const visualBar = "█".repeat(barFilled) + "░".repeat(barEmpty);
+
+                stream.innerHTML += `
+                    <div class="chat-bubble bg-slate-800 p-3.5 rounded-2xl max-w-[88%] text-slate-200 border border-slate-700 leading-relaxed font-mono">
+                        💸 <b class="text-rose-400">Pengeluaran tercatat!</b><br>
+                        ├ Nominal : <b>-${formatIDR(amount)}</b><br>
+                        ├ Kategori : ${category}<br>
+                        ├ Dompet : 👛 Dompet Utama<br>
+                        └ Saldo Baru : <b>${formatIDR(currentBalance)}</b><br><br>
+                        📊 <b>Budget ${category.split(' ')[1] || 'Kategori'}:</b><br>
+                        [${visualBar}] ${percent}% — sisa ${formatIDR(Math.max(0, 2500000 - foodExpense))}
+                    </div>
+                `;
+            }
+            stream.scrollTop = stream.scrollHeight;
+        }, 400);
+    }
+
+    function updateLiveDashboard() {
+        document.getElementById("demo-balance").innerText = formatIDR(currentBalance);
+        document.getElementById("demo-income").innerText = formatIDR(currentIncome);
+        document.getElementById("demo-expense").innerText = formatIDR(currentExpense);
+
+        const foodPct = Math.min(100, Math.round((foodExpense / 2500000) * 100));
+        document.getElementById("demo-cat-food").innerText = `${formatIDR(foodExpense)} / Rp 2.500.000 (${foodPct}%)`;
+        document.getElementById("demo-bar-food").style.width = foodPct + "%";
+
+        const transPct = Math.min(100, Math.round((transExpense / 1000000) * 100));
+        document.getElementById("demo-cat-trans").innerText = `${formatIDR(transExpense)} / Rp 1.000.000 (${transPct}%)`;
+        document.getElementById("demo-bar-trans").style.width = transPct + "%";
+    }
+
+    function sendLandingChat() {
+        const input = document.getElementById("landing-chat-input");
+        const val = input.value.trim();
+        if (!val) return;
+        input.value = "";
+
+        // Simple heuristic for interactive preview
+        let amount = 35000;
+        let category = "🍜 Makanan & Minuman";
+        const lower = val.toLowerCase();
+
+        if (lower.includes("bensin") || lower.includes("transport") || lower.includes("ojek") || lower.includes("grab")) {
+            category = "🚗 Transportasi";
+            amount = 35000;
+        } else if (lower.includes("gaji") || lower.includes("bonus") || lower.includes("dapat uang")) {
+            sendQuickDemo(val, 1500000, "💼 Pendapatan", "income");
+            return;
+        } else if (lower.includes("saldo")) {
+            sendQuickDemo(val, 0, "Info Saldo", "saldo");
+            return;
+        }
+
+        // Try to parse nominal from text
+        const match = lower.match(/(\d+)(rb|k|ribu|jt|juta)?/);
+        if (match) {
+            let num = parseInt(match[1]);
+            const unit = match[2];
+            if (unit === "rb" || unit === "k" || unit === "ribu") num *= 1000;
+            else if (unit === "jt" || unit === "juta") num *= 1000000;
+            if (num > 0 && num < 100000000) amount = num;
+        }
+
+        sendQuickDemo(val, amount, category, "expense");
+    }
+
+    // 3. FAQ Accordion Toggle
+    function toggleFaq(num) {
+        const ans = document.getElementById("faq-answer-" + num);
+        const icon = document.getElementById("faq-icon-" + num);
+        const isOpen = ans.classList.contains("open");
+
+        // Close all
+        for (let i = 1; i <= 7; i++) {
+            const a = document.getElementById("faq-answer-" + i);
+            const ic = document.getElementById("faq-icon-" + i);
+            if (a) a.classList.remove("open");
+            if (ic) ic.innerText = "+";
+        }
+
+        if (!isOpen) {
+            ans.classList.add("open");
+            icon.innerText = "−";
+        }
+    }
+
+    // 4. Update Time Clock
+    function updateClock() {
+        const now = new Date();
+        const hrs = String(now.getHours()).padStart(2, '0');
+        const mins = String(now.getMinutes()).padStart(2, '0');
+        const elem = document.getElementById("demo-clock");
+        if (elem) elem.innerText = `${hrs}:${mins} WIB`;
+    }
+
+    document.addEventListener("DOMContentLoaded", () => {
+        updateClock();
+        setInterval(updateClock, 60000);
+        if (window.lucide) window.lucide.createIcons();
+    });
+</script>
+{% endblock %}

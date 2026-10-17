@@ -1,0 +1,39 @@
+# =============================================================================
+# TataDana - Production Dependencies
+# =============================================================================
+
+# Core Web Framework
+fastapi==0.143.2
+uvicorn[standard]==0.54.0
+starlette==1.8.0
+
+# Templating & Forms
+Jinja2==3.1.6
+python-multipart==0.0.32
+
+# Validation & Settings
+pydantic==2.14.1
+pydantic_core==2.50.1
+email-validator==2.3.0
+python-dotenv==1.2.4
+
+# Security, Auth & Encryption
+PyJWT==2.15.1
+cryptography==50.0.2
+
+# Date, Timezone & HTTP
+pytz==2026.5
+httpx==0.28.1
+
+# Document Generation & Reporting (Excel & PDF)
+openpyxl==3.1.5
+reportlab==5.0.1
+pillow==12.3.0
+
+# Database & Supabase Integration
+supabase==2.33.0
+postgrest==2.33.0
+storage3==2.33.0
+
+# Testing & Quality Assurance
+pytest==9.1.1

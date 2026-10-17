@@ -1,0 +1,142 @@
+{% extends "admin/layout.html" %}
+
+{% block admin_title %}Verifikasi & Approval Pembayaran{% endblock %}
+{% block admin_subtitle %}Tinjau dan setujui transaksi upgrade langganan pengguna TataDana Pro{% endblock %}
+
+{% block admin_content %}
+<div class="space-y-6">
+    <!-- Header Card -->
+    <div class="p-6 rounded-2xl bg-white border border-slate-200 shadow-sm flex flex-col md:flex-row md:items-center justify-between gap-4">
+        <div>
+            <div class="flex items-center gap-2">
+                <span class="p-1.5 rounded-lg bg-emerald-50 text-emerald-600">
+                    <i data-lucide="shield-check" class="w-4 h-4"></i>
+                </span>
+                <h3 class="font-bold text-sm text-slate-900">Verifikasi Manual & Integrasi Gateway</h3>
+            </div>
+            <p class="text-xs text-slate-500 mt-1 max-w-2xl">
+                Saat admin menyetujui (Approve) pembayaran pesanan Pro, status langganan pengguna otomatis aktif dan limit kuota bulanan serta fitur Pro terbuka seketika.
+            </p>
+        </div>
+        <button onclick="loadPayments()" class="px-4 py-2 rounded-xl text-xs font-semibold bg-slate-100 hover:bg-slate-200 text-slate-700 flex items-center gap-1.5 transition-colors">
+            <i data-lucide="refresh-cw" class="w-3.5 h-3.5"></i>
+            <span>Refresh Antrean</span>
+        </button>
+    </div>
+
+    <!-- Payments Table Card -->
+    <div class="rounded-2xl bg-white border border-slate-200 shadow-sm overflow-hidden">
+        <div class="p-5 border-b border-slate-100 flex items-center justify-between bg-slate-50/50">
+            <div>
+                <h4 class="font-bold text-sm text-slate-900">Antrean Pembayaran Masuk</h4>
+                <p class="text-xs text-slate-500">Daftar transaksi upgrade langganan pengguna</p>
+            </div>
+        </div>
+
+        <div class="overflow-x-auto">
+            <table class="w-full text-left text-xs">
+                <thead>
+                    <tr class="border-b border-slate-100 text-slate-400 uppercase font-semibold bg-white">
+                        <th class="py-3 px-4">Order ID & Waktu</th>
+                        <th class="py-3 px-4">Pengguna</th>
+                        <th class="py-3 px-4">Paket & Metode</th>
+                        <th class="py-3 px-4">Nominal</th>
+                        <th class="py-3 px-4">Status</th>
+                        <th class="py-3 px-4 text-right">Aksi Verifikasi</th>
+                    </tr>
+                </thead>
+                <tbody id="payments-table-body" class="divide-y divide-slate-100 font-medium text-slate-700">
+                    <tr><td colspan="6" class="py-8 text-center text-slate-400">Memuat pembayaran...</td></tr>
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+{{ super() }}
+<script>
+    async function loadPayments() {
+        const tbody = document.getElementById("payments-table-body");
+        try {
+            const res = await apiCall("/api/admin/payments");
+            const list = res.data || [];
+
+            if (list.length === 0) {
+                tbody.innerHTML = `<tr><td colspan="6" class="py-8 text-center text-slate-400">Belum ada transaksi pembayaran.</td></tr>`;
+                return;
+            }
+
+            tbody.innerHTML = list.map(p => {
+                const isPending = p.status === 'pending';
+                const statusBadge = isPending 
+                    ? `<span class="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[10px] font-bold bg-amber-50 text-amber-800 border border-amber-300">⏳ Menunggu Review</span>`
+                    : (p.status === 'active' 
+                        ? `<span class="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[10px] font-bold bg-emerald-50 text-emerald-700 border border-emerald-300">✓ Disetujui</span>`
+                        : `<span class="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[10px] font-bold bg-rose-50 text-rose-700 border border-rose-300">✗ Ditolak</span>`);
+
+                return `
+                <tr class="hover:bg-slate-50/70 transition-colors">
+                    <td class="py-3 px-4">
+                        <div class="font-mono font-bold text-slate-900">${p.order_id}</div>
+                        <div class="text-[10px] text-slate-400">${(p.created_at || '').slice(0, 19)}</div>
+                    </td>
+                    <td class="py-3 px-4">
+                        <div class="font-semibold text-slate-900">${p.full_name}</div>
+                        <div class="text-[10px] text-slate-400 font-mono">${p.phone_number || p.email}</div>
+                    </td>
+                    <td class="py-3 px-4">
+                        <span class="uppercase font-bold text-[10px] text-orange-600 bg-orange-50 border border-orange-200 px-2 py-0.5 rounded">${p.plan}</span>
+                        <span class="text-slate-500 block text-[10px] mt-0.5">${p.payment_type || 'Transfer Manual'}</span>
+                    </td>
+                    <td class="py-3 px-4 font-bold text-slate-900">${formatIDR(p.gross_amount)}</td>
+                    <td class="py-3 px-4">${statusBadge}</td>
+                    <td class="py-3 px-4 text-right space-x-1.5 whitespace-nowrap">
+                        ${isPending ? `
+                            <button onclick="handlePaymentAction('${p.id}', 'approve')" class="px-3 py-1.5 rounded-xl text-xs font-bold bg-emerald-600 hover:bg-emerald-700 text-white shadow-sm transition-all">
+                                Approve
+                            </button>
+                            <button onclick="handlePaymentAction('${p.id}', 'reject')" class="px-3 py-1.5 rounded-xl text-xs font-semibold bg-rose-50 hover:bg-rose-100 text-rose-700 border border-rose-200 transition-colors">
+                                Reject
+                            </button>
+                        ` : `
+                            <span class="text-[11px] text-slate-400 italic">Selesai</span>
+                        `}
+                    </td>
+                </tr>
+                `;
+            }).join('');
+
+            if (window.lucide) window.lucide.createIcons();
+        } catch (e) {
+            tbody.innerHTML = `<tr><td colspan="6" class="py-8 text-center text-rose-500">Gagal memuat data pembayaran: ${e.message}</td></tr>`;
+        }
+    }
+
+    async function handlePaymentAction(id, action) {
+        let notes = null;
+        if (action === "approve") {
+            if (!confirm("Setujui pembayaran ini dan upgrade akun pengguna ke TataDana Pro?")) return;
+        } else {
+            notes = prompt("Masukkan alasan penolakan pesanan:");
+            if (notes === null) return;
+        }
+
+        try {
+            const res = await apiCall(`/api/admin/payments/${id}/action`, {
+                method: "POST",
+                body: JSON.stringify({ action, notes })
+            });
+            showToast(res.message || "Tindakan berhasil diproses", "success");
+            loadPayments();
+        } catch (err) {
+            showToast(err.message, "error");
+        }
+    }
+
+    document.addEventListener("DOMContentLoaded", () => {
+        loadPayments();
+    });
+</script>
+{% endblock %}

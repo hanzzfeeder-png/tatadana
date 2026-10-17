@@ -1,0 +1,397 @@
+{% extends "dashboard/layout.html" %}
+
+{% block page_title %}Laporan Keuangan{% endblock %}
+{% block page_subtitle %}Analisis detail, ringkasan arus kas, dan export dokumen resmi PDF / Excel{% endblock %}
+
+{% block content %}
+<div class="space-y-6">
+    <!-- Summary Header Cards -->
+    <div class="grid grid-cols-1 sm:grid-cols-3 gap-4">
+        <div class="card-premium p-5 border-t-4 border-t-emerald-500">
+            <span class="text-xs font-bold text-slate-400 uppercase tracking-wider">Total Pemasukan</span>
+            <div id="rep-income" class="text-2xl font-black text-emerald-600 mt-2">Rp 0</div>
+            <div class="text-[11px] text-slate-400 mt-1">Pada periode yang dipilih</div>
+        </div>
+
+        <div class="card-premium p-5 border-t-4 border-t-red-500">
+            <span class="text-xs font-bold text-slate-400 uppercase tracking-wider">Total Pengeluaran</span>
+            <div id="rep-expense" class="text-2xl font-black text-red-600 mt-2">Rp 0</div>
+            <div class="text-[11px] text-slate-400 mt-1">Pada periode yang dipilih</div>
+        </div>
+
+        <div class="card-premium p-5 border-t-4 border-t-blue-500">
+            <span class="text-xs font-bold text-slate-400 uppercase tracking-wider">Net Cashflow</span>
+            <div id="rep-cashflow" class="text-2xl font-black text-slate-900 mt-2">Rp 0</div>
+            <div id="rep-savings-rate" class="text-[11px] text-blue-600 font-semibold mt-1">Savings Rate: 0%</div>
+        </div>
+    </div>
+
+    <!-- Filters & Export Toolbar -->
+    <div class="card-premium p-5">
+        <div class="flex flex-col md:flex-row md:items-center justify-between gap-4 pb-4 border-b border-slate-100">
+            <div>
+                <h3 class="font-bold text-sm text-slate-900">Filter & Pencarian Laporan</h3>
+                <p class="text-xs text-slate-400">Sesuaikan kriteria untuk menampilkan data transaksi spesifik</p>
+            </div>
+            
+            <!-- Export Buttons (Pro Feature) -->
+            <div class="flex items-center gap-2">
+                <button onclick="handleExport('excel')" class="flex items-center gap-1.5 px-3.5 py-2 rounded-xl text-xs font-bold bg-emerald-50 text-emerald-700 hover:bg-emerald-100 border border-emerald-200 transition-colors">
+                    <i data-lucide="file-spreadsheet" class="w-4 h-4"></i>
+                    <span>Export Excel (.xlsx)</span>
+                </button>
+                <button onclick="handleExport('pdf')" class="flex items-center gap-1.5 px-3.5 py-2 rounded-xl text-xs font-bold bg-orange-50 text-orange-700 hover:bg-orange-100 border border-orange-200 transition-colors">
+                    <i data-lucide="file-text" class="w-4 h-4"></i>
+                    <span>Export PDF</span>
+                </button>
+                <button onclick="openModal('export-history-modal')" class="p-2 rounded-xl text-slate-600 hover:bg-slate-100 border border-slate-200" title="Riwayat Export">
+                    <i data-lucide="history" class="w-4 h-4"></i>
+                </button>
+            </div>
+        </div>
+
+        <!-- Filter Controls -->
+        <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-3 mt-4">
+            <div>
+                <label class="block text-[11px] font-semibold text-slate-500 mb-1">Dari Tanggal</label>
+                <input type="date" id="filter-start-date" class="input-orange w-full px-3 py-2 text-xs rounded-xl border border-slate-200 bg-white">
+            </div>
+            <div>
+                <label class="block text-[11px] font-semibold text-slate-500 mb-1">Sampai Tanggal</label>
+                <input type="date" id="filter-end-date" class="input-orange w-full px-3 py-2 text-xs rounded-xl border border-slate-200 bg-white">
+            </div>
+            <div>
+                <label class="block text-[11px] font-semibold text-slate-500 mb-1">Kategori</label>
+                <select id="filter-category" class="input-orange w-full px-3 py-2 text-xs rounded-xl border border-slate-200 bg-white">
+                    <option value="">Semua Kategori</option>
+                </select>
+            </div>
+            <div>
+                <label class="block text-[11px] font-semibold text-slate-500 mb-1">Dompet</label>
+                <select id="filter-wallet" class="input-orange w-full px-3 py-2 text-xs rounded-xl border border-slate-200 bg-white">
+                    <option value="">Semua Dompet</option>
+                </select>
+            </div>
+            <div>
+                <label class="block text-[11px] font-semibold text-slate-500 mb-1">Jenis Transaksi</label>
+                <select id="filter-type" class="input-orange w-full px-3 py-2 text-xs rounded-xl border border-slate-200 bg-white">
+                    <option value="">Semua Jenis</option>
+                    <option value="expense">Pengeluaran</option>
+                    <option value="income">Pemasukan</option>
+                    <option value="transfer">Transfer</option>
+                </select>
+            </div>
+        </div>
+
+        <div class="flex items-center justify-between gap-3 mt-3 pt-3 border-t border-slate-50">
+            <div class="relative flex-1 max-w-sm">
+                <i data-lucide="search" class="w-4 h-4 text-slate-400 absolute left-3 top-2.5"></i>
+                <input type="text" id="filter-search" placeholder="Cari catatan transaksi..." class="input-orange w-full pl-9 pr-3 py-1.5 text-xs rounded-xl border border-slate-200 bg-white">
+            </div>
+            <div class="flex gap-2">
+                <button onclick="applyFilters()" class="btn-primary px-4 py-1.5 rounded-xl text-xs font-bold">Terapkan Filter</button>
+                <button onclick="resetFilters()" class="px-3 py-1.5 rounded-xl text-xs font-semibold text-slate-600 hover:bg-slate-100 border border-slate-200">Reset</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Transactions Data Table -->
+    <div class="card-premium overflow-hidden">
+        <div class="p-5 border-b border-slate-100 flex items-center justify-between">
+            <div class="flex items-center gap-2">
+                <h3 class="font-bold text-sm text-slate-900">Rincian Transaksi</h3>
+                <span id="badge-total-records" class="text-xs px-2 py-0.5 rounded-full bg-slate-100 text-slate-600 font-semibold">0 data</span>
+            </div>
+            <div class="text-xs text-slate-400">Klik header kolom untuk sorting</div>
+        </div>
+
+        <div class="overflow-x-auto">
+            <table class="w-full text-left text-xs">
+                <thead>
+                    <tr class="bg-slate-50/70 border-b border-slate-200 text-slate-500 uppercase font-bold tracking-wider">
+                        <th class="py-3 px-4 cursor-pointer hover:text-orange-600" onclick="handleSort('transaction_date')">
+                            <div class="flex items-center gap-1">Tanggal (WIB) <i data-lucide="arrow-up-down" class="w-3.5 h-3.5"></i></div>
+                        </th>
+                        <th class="py-3 px-4 cursor-pointer hover:text-orange-600" onclick="handleSort('category')">
+                            <div class="flex items-center gap-1">Kategori <i data-lucide="arrow-up-down" class="w-3.5 h-3.5"></i></div>
+                        </th>
+                        <th class="py-3 px-4 cursor-pointer hover:text-orange-600" onclick="handleSort('wallet')">
+                            <div class="flex items-center gap-1">Dompet <i data-lucide="arrow-up-down" class="w-3.5 h-3.5"></i></div>
+                        </th>
+                        <th class="py-3 px-4">Sumber</th>
+                        <th class="py-3 px-4">Catatan</th>
+                        <th class="py-3 px-4 text-right cursor-pointer hover:text-orange-600" onclick="handleSort('amount')">
+                            <div class="flex items-center justify-end gap-1">Nominal <i data-lucide="arrow-up-down" class="w-3.5 h-3.5"></i></div>
+                        </th>
+                    </tr>
+                </thead>
+                <tbody id="report-table-body" class="divide-y divide-slate-100 font-medium">
+                    <tr><td colspan="6" class="py-8 text-center text-slate-400">Memuat laporan...</td></tr>
+                </tbody>
+            </table>
+        </div>
+
+        <!-- Pagination Bar -->
+        <div class="p-4 border-t border-slate-100 flex items-center justify-between text-xs text-slate-500">
+            <span id="pagination-info">Menampilkan halaman 1</span>
+            <div class="flex items-center gap-2">
+                <button id="btn-prev-page" onclick="changePage(-1)" class="px-3 py-1.5 rounded-lg border border-slate-200 hover:bg-slate-50 disabled:opacity-50">Sebelumnya</button>
+                <button id="btn-next-page" onclick="changePage(1)" class="px-3 py-1.5 rounded-lg border border-slate-200 hover:bg-slate-50 disabled:opacity-50">Selanjutnya</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Modal: Riwayat Export Laporan -->
+<div id="export-history-modal" class="fixed inset-0 bg-slate-900/40 backdrop-blur-sm z-50 hidden items-center justify-center p-4">
+    <div class="bg-white rounded-2xl max-w-lg w-full p-6 shadow-2xl relative">
+        <button onclick="closeModal('export-history-modal')" class="absolute top-5 right-5 text-slate-400 hover:text-slate-600 text-xl font-bold">&times;</button>
+        <h3 class="text-base font-bold text-slate-900 mb-1">Riwayat Export Laporan</h3>
+        <p class="text-xs text-slate-500 mb-4">File hasil export tersimpan sementara dan dapat didownload kapan saja.</p>
+
+        <div id="export-history-list" class="space-y-2 max-h-72 overflow-y-auto pr-1">
+            <div class="text-xs text-slate-400 py-6 text-center">Memuat riwayat export...</div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+{{ super() }}
+<script>
+    let currentPage = 1;
+    let totalPages = 1;
+    let currentSortBy = "transaction_date";
+    let currentSortOrder = "DESC";
+
+    async function loadReportPage() {
+        await Promise.all([
+            loadReportSummary(),
+            loadReportTable(),
+            loadFilterDropdowns()
+        ]);
+    }
+
+    async function loadFilterDropdowns() {
+        const [wRes, cRes] = await Promise.all([
+            apiCall("/api/wallets"),
+            apiCall("/api/categories")
+        ]);
+
+        const fw = document.getElementById("filter-wallet");
+        const fc = document.getElementById("filter-category");
+
+        if (fw) {
+            fw.innerHTML = '<option value="">Semua Dompet</option>' + (wRes.data || []).map(w => `<option value="${w.id}">${w.icon || '👛'} ${w.name}</option>`).join('');
+        }
+        if (fc) {
+            fc.innerHTML = '<option value="">Semua Kategori</option>' + (cRes.data || []).map(c => `<option value="${c.id}">${c.icon || '🏷️'} ${c.name}</option>`).join('');
+        }
+    }
+
+    async function loadReportSummary() {
+        const start = document.getElementById("filter-start-date").value;
+        const end = document.getElementById("filter-end-date").value;
+        let url = `/api/reports/summary?`;
+        if (start) url += `start_date=${start}&`;
+        if (end) url += `end_date=${end}&`;
+
+        try {
+            const res = await apiCall(url);
+            const d = res.data;
+            document.getElementById("rep-income").innerText = formatIDR(d.total_income);
+            document.getElementById("rep-expense").innerText = formatIDR(d.total_expense);
+            document.getElementById("rep-cashflow").innerText = formatIDR(d.net_cashflow);
+            document.getElementById("rep-savings-rate").innerText = `Savings Rate: ${d.savings_rate}%`;
+        } catch (e) {
+            console.error("Gagal load summary", e);
+        }
+    }
+
+    async function loadReportTable() {
+        const start = document.getElementById("filter-start-date").value;
+        const end = document.getElementById("filter-end-date").value;
+        const cat = document.getElementById("filter-category").value;
+        const wallet = document.getElementById("filter-wallet").value;
+        const type = document.getElementById("filter-type").value;
+        const search = document.getElementById("filter-search").value;
+
+        let url = `/api/reports/table?page=${currentPage}&sort_by=${currentSortBy}&sort_order=${currentSortOrder}`;
+        if (start) url += `&start_date=${start}`;
+        if (end) url += `&end_date=${end}`;
+        if (cat) url += `&category_id=${cat}`;
+        if (wallet) url += `&wallet_id=${wallet}`;
+        if (type) url += `&type=${type}`;
+        if (search) url += `&search=${encodeURIComponent(search)}`;
+
+        const tbody = document.getElementById("report-table-body");
+
+        try {
+            const res = await apiCall(url);
+            const data = res.data;
+            totalPages = data.total_pages;
+
+            document.getElementById("badge-total-records").innerText = `${data.total_records} data`;
+            document.getElementById("pagination-info").innerText = `Halaman ${data.page} dari ${data.total_pages || 1} (${data.total_records} total transaksi)`;
+
+            document.getElementById("btn-prev-page").disabled = currentPage <= 1;
+            document.getElementById("btn-next-page").disabled = currentPage >= totalPages;
+
+            if (!data.transactions || data.transactions.length === 0) {
+                tbody.innerHTML = `<tr><td colspan="6" class="py-8 text-center text-slate-400">Tidak ada transaksi yang cocok dengan filter yang dipilih.</td></tr>`;
+                return;
+            }
+
+            const sourceBadges = {
+                web: `<span class="inline-flex items-center px-1.5 py-0.5 rounded text-[10px] bg-slate-100 text-slate-600">Web</span>`,
+                telegram_text: `<span class="inline-flex items-center px-1.5 py-0.5 rounded text-[10px] bg-sky-100 text-sky-700">TG Teks</span>`,
+                telegram_photo: `<span class="inline-flex items-center px-1.5 py-0.5 rounded text-[10px] bg-purple-100 text-purple-700">TG Struk</span>`,
+                telegram_voice: `<span class="inline-flex items-center px-1.5 py-0.5 rounded text-[10px] bg-amber-100 text-amber-700">TG Voice</span>`
+            };
+
+            let html = "";
+            data.transactions.forEach(t => {
+                const isInc = t.type === 'income';
+                const isTrf = t.type === 'transfer';
+                const sign = isInc ? "+" : (isTrf ? "" : "-");
+                const colorClass = isInc ? "text-emerald-600" : (isTrf ? "text-blue-600" : "text-slate-900");
+                const hasReceiptItems = t.receipt_items && t.receipt_items.length > 0;
+                const expandRowId = `receipt-expand-${t.id}`;
+
+                html += `
+                <tr class="hover:bg-slate-50/70 transition-colors">
+                    <td class="py-3 px-4 text-slate-500">${t.transaction_date.slice(0, 16)}</td>
+                    <td class="py-3 px-4 font-semibold text-slate-800">
+                        ${t.category_icon || '🏷️'} ${t.category_name || (isTrf ? 'Transfer' : '-')}
+                    </td>
+                    <td class="py-3 px-4 text-slate-600">${t.wallet_name || '-'}</td>
+                    <td class="py-3 px-4">${sourceBadges[t.source] || sourceBadges.web}</td>
+                    <td class="py-3 px-4 text-slate-600">
+                        <div class="flex items-center gap-1.5">
+                            <span>${t.note || '-'}</span>
+                            ${hasReceiptItems ? `
+                                <button onclick="toggleReceiptRow('${expandRowId}')" class="px-1.5 py-0.5 text-[10px] font-bold rounded bg-purple-100 text-purple-700 hover:bg-purple-200">
+                                    ${t.receipt_items.length} item ▾
+                                </button>
+                            ` : ''}
+                        </div>
+                    </td>
+                    <td class="py-3 px-4 text-right font-bold ${colorClass}">${sign}${formatIDR(t.amount)}</td>
+                </tr>
+                `;
+
+                if (hasReceiptItems) {
+                    html += `
+                    <tr id="${expandRowId}" class="hidden bg-purple-50/30 border-b border-purple-100">
+                        <td colspan="6" class="py-3 px-6">
+                            <div class="text-[11px] font-bold text-purple-900 mb-1.5">Rincian Item Struk Belanja:</div>
+                            <div class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-2">
+                                ${t.receipt_items.map(it => `
+                                    <div class="p-2 rounded-lg bg-white border border-purple-100 text-xs flex justify-between">
+                                        <span class="text-slate-700 font-medium">${it.name}</span>
+                                        <span class="font-bold text-slate-900">${formatIDR(it.price)}</span>
+                                    </div>
+                                `).join('')}
+                            </div>
+                        </td>
+                    </tr>
+                    `;
+                }
+            });
+
+            tbody.innerHTML = html;
+        } catch (e) {
+            tbody.innerHTML = `<tr><td colspan="6" class="py-8 text-center text-red-500">Error memuat data: ${e.message}</td></tr>`;
+        }
+    }
+
+    function toggleReceiptRow(id) {
+        const el = document.getElementById(id);
+        if (el) el.classList.toggle("hidden");
+    }
+
+    function handleSort(col) {
+        if (currentSortBy === col) {
+            currentSortOrder = currentSortOrder === "ASC" ? "DESC" : "ASC";
+        } else {
+            currentSortBy = col;
+            currentSortOrder = "DESC";
+        }
+        currentPage = 1;
+        loadReportTable();
+    }
+
+    function applyFilters() {
+        currentPage = 1;
+        loadReportSummary();
+        loadReportTable();
+    }
+
+    function resetFilters() {
+        document.getElementById("filter-start-date").value = "";
+        document.getElementById("filter-end-date").value = "";
+        document.getElementById("filter-category").value = "";
+        document.getElementById("filter-wallet").value = "";
+        document.getElementById("filter-type").value = "";
+        document.getElementById("filter-search").value = "";
+        applyFilters();
+    }
+
+    function changePage(delta) {
+        const target = currentPage + delta;
+        if (target >= 1 && target <= totalPages) {
+            currentPage = target;
+            loadReportTable();
+        }
+    }
+
+    async function handleExport(type) {
+        const start = document.getElementById("filter-start-date").value;
+        const end = document.getElementById("filter-end-date").value;
+
+        showToast(`Men-generate laporan ${type.toUpperCase()}...`, "info");
+        try {
+            const res = await apiCall(`/api/reports/export/${type}`, {
+                method: "POST",
+                body: JSON.stringify({ start_date: start || null, end_date: end || null })
+            });
+
+            showToast("Laporan siap didownload!", "success");
+            window.open(res.download_url, "_blank");
+            loadExportHistory();
+        } catch (err) {
+            showToast(err.message, "error");
+        }
+    }
+
+    async function loadExportHistory() {
+        const container = document.getElementById("export-history-list");
+        try {
+            const res = await apiCall("/api/reports/export/history");
+            const list = res.data || [];
+            if (list.length === 0) {
+                container.innerHTML = `<div class="text-xs text-slate-400 py-6 text-center">Belum ada riwayat export.</div>`;
+                return;
+            }
+            container.innerHTML = list.map(item => `
+                <div class="p-3 rounded-xl border border-slate-100 hover:border-slate-200 bg-slate-50 flex items-center justify-between">
+                    <div>
+                        <div class="text-xs font-bold text-slate-900">${item.file_name}</div>
+                        <div class="text-[10px] text-slate-500 mt-0.5">Dibuat: ${item.created_at} (${item.file_type.toUpperCase()})</div>
+                    </div>
+                    <a href="${item.storage_url}" target="_blank" class="px-3 py-1.5 rounded-lg text-xs font-bold bg-white text-orange-600 hover:bg-orange-50 border border-slate-200 shadow-sm">
+                        Download
+                    </a>
+                </div>
+            `).join('');
+        } catch (e) {
+            container.innerHTML = `<div class="text-xs text-red-500 py-4 text-center">Gagal memuat riwayat: ${e.message}</div>`;
+        }
+    }
+
+    document.addEventListener("DOMContentLoaded", () => {
+        loadReportPage();
+        loadExportHistory();
+    });
+</script>
+{% endblock %}

@@ -1,0 +1,142 @@
+{% extends "admin/layout.html" %}
+
+{% block admin_title %}Audit Log & Transparansi Superadmin{% endblock %}
+{% block admin_subtitle %}Pencatatan otomatis setiap inspeksi data keuangan, impersonasi akun, dan perubahan sistem{% endblock %}
+
+{% block admin_content %}
+<div class="space-y-6">
+    <!-- Header Card -->
+    <div class="p-6 rounded-2xl bg-white border border-slate-200 shadow-sm flex flex-col md:flex-row md:items-center justify-between gap-4">
+        <div>
+            <div class="flex items-center gap-2">
+                <span class="p-1.5 rounded-lg bg-purple-50 text-purple-600">
+                    <i data-lucide="eye" class="w-4 h-4"></i>
+                </span>
+                <h3 class="font-bold text-sm text-slate-900">Jaminan Privasi & Perlindungan Data Pengguna</h3>
+            </div>
+            <p class="text-xs text-slate-500 mt-1 max-w-2xl">
+                Setiap kali Superadmin menginspeksi transaksi pengguna untuk tujuan troubleshooting atau login tanpa password (impersonate), sistem secara otomatis mencatat waktu, identitas admin, target user, dan IP address ke log yang tidak dapat diubah (immutable).
+            </p>
+        </div>
+        <button onclick="loadAuditLogs(currentPage)" class="px-4 py-2 rounded-xl text-xs font-semibold bg-slate-100 hover:bg-slate-200 text-slate-700 flex items-center gap-1.5 transition-colors">
+            <i data-lucide="refresh-cw" class="w-3.5 h-3.5"></i>
+            <span>Refresh Audit</span>
+        </button>
+    </div>
+
+    <!-- Audit Logs Table Card -->
+    <div class="rounded-2xl bg-white border border-slate-200 shadow-sm overflow-hidden">
+        <div class="p-5 border-b border-slate-100 flex items-center justify-between bg-slate-50/50">
+            <div>
+                <h4 class="font-bold text-sm text-slate-900">Daftar Rekam Jejak Administratif</h4>
+                <p class="text-xs text-slate-500">Histori aktivitas Superadmin dan staf pengelola sistem</p>
+            </div>
+            <span id="audit-total-badge" class="text-xs font-bold text-slate-500">Total: 0 aktivitas</span>
+        </div>
+
+        <div class="overflow-x-auto">
+            <table class="w-full text-left text-xs">
+                <thead>
+                    <tr class="border-b border-slate-100 text-slate-400 uppercase font-semibold bg-white">
+                        <th class="py-3 px-4">Waktu (WIB)</th>
+                        <th class="py-3 px-4">Admin Pelaksana</th>
+                        <th class="py-3 px-4">Tindakan / Aksi</th>
+                        <th class="py-3 px-4">Target Pengguna</th>
+                        <th class="py-3 px-4">Keterangan / Rincian</th>
+                        <th class="py-3 px-4 text-right">IP Address</th>
+                    </tr>
+                </thead>
+                <tbody id="audit-table-body" class="divide-y divide-slate-100 font-medium text-slate-700">
+                    <tr><td colspan="6" class="py-8 text-center text-slate-400">Memuat log audit...</td></tr>
+                </tbody>
+            </table>
+        </div>
+
+        <!-- Pagination Controls -->
+        <div class="p-4 border-t border-slate-100 flex items-center justify-between text-xs text-slate-600 bg-slate-50/50">
+            <span id="audit-page-info">Halaman 1 dari 1</span>
+            <div class="flex items-center gap-2">
+                <button id="audit-btn-prev" onclick="goToAuditPage(currentPage - 1)" class="px-3 py-1.5 rounded-lg border border-slate-200 bg-white hover:bg-slate-50 disabled:opacity-50 disabled:cursor-not-allowed">
+                    &larr; Sebelumnya
+                </button>
+                <button id="audit-btn-next" onclick="goToAuditPage(currentPage + 1)" class="px-3 py-1.5 rounded-lg border border-slate-200 bg-white hover:bg-slate-50 disabled:opacity-50 disabled:cursor-not-allowed">
+                    Selanjutnya &rarr;
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+{{ super() }}
+<script>
+    let currentPage = 1;
+    let totalPages = 1;
+
+    function goToAuditPage(page) {
+        if (page < 1 || page > totalPages) return;
+        currentPage = page;
+        loadAuditLogs(page);
+    }
+
+    async function loadAuditLogs(page = 1) {
+        const tbody = document.getElementById("audit-table-body");
+        try {
+            const res = await apiCall(`/api/admin/audit-logs?page=${page}&limit=20`);
+            const list = res.data || [];
+            const pag = res.pagination || { page: 1, total_pages: 1, total: 0 };
+
+            currentPage = pag.page;
+            totalPages = pag.total_pages;
+
+            document.getElementById("audit-total-badge").innerText = `Total: ${pag.total} aktivitas`;
+            document.getElementById("audit-page-info").innerText = `Halaman ${pag.page} dari ${pag.total_pages}`;
+            document.getElementById("audit-btn-prev").disabled = (pag.page <= 1);
+            document.getElementById("audit-btn-next").disabled = (pag.page >= pag.total_pages);
+
+            if (list.length === 0) {
+                tbody.innerHTML = `<tr><td colspan="6" class="py-8 text-center text-slate-400">Belum ada aktivitas audit yang tercatat.</td></tr>`;
+                return;
+            }
+
+            tbody.innerHTML = list.map(l => `
+                <tr class="hover:bg-slate-50/70 transition-colors">
+                    <td class="py-3.5 px-4 text-slate-500 font-mono text-[11px]">${(l.created_at || '').slice(0, 19)}</td>
+                    <td class="py-3.5 px-4 font-bold text-purple-700">${l.admin_name || 'Superadmin'}</td>
+                    <td class="py-3.5 px-4">
+                        <span class="px-2.5 py-1 rounded-full text-[10px] font-bold ${getActionBadge(l.action)}">
+                            ${l.action}
+                        </span>
+                    </td>
+                    <td class="py-3.5 px-4 font-medium text-slate-900">
+                        ${l.target_user_name ? `${l.target_user_name} <span class="text-[10px] text-slate-400 block">${l.target_user_email || ''}</span>` : '<span class="text-slate-300">-</span>'}
+                    </td>
+                    <td class="py-3.5 px-4 text-slate-600 max-w-sm truncate" title="${l.details || ''}">
+                        ${l.details || '-'}
+                    </td>
+                    <td class="py-3.5 px-4 text-right font-mono text-slate-400 text-[11px]">
+                        ${l.ip_address || '-'}
+                    </td>
+                </tr>
+            `).join('');
+
+            if (window.lucide) window.lucide.createIcons();
+        } catch (e) {
+            tbody.innerHTML = `<tr><td colspan="6" class="py-8 text-center text-rose-500">Gagal memuat log audit: ${e.message}</td></tr>`;
+        }
+    }
+
+    function getActionBadge(action) {
+        if (action.includes('impersonate')) return 'bg-amber-50 text-amber-800 border border-amber-200';
+        if (action.includes('transaction')) return 'bg-blue-50 text-blue-700 border border-blue-200';
+        if (action.includes('approve')) return 'bg-emerald-50 text-emerald-700 border border-emerald-200';
+        if (action.includes('reject')) return 'bg-rose-50 text-rose-700 border border-rose-200';
+        return 'bg-slate-100 text-slate-700';
+    }
+
+    document.addEventListener("DOMContentLoaded", () => {
+        loadAuditLogs(1);
+    });
+</script>
+{% endblock %}

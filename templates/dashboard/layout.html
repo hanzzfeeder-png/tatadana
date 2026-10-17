@@ -1,0 +1,349 @@
+{% extends "base.html" %}
+
+{% block body %}
+<div class="min-h-screen flex flex-col md:flex-row bg-[#F8FAFC]">
+    <!-- Mobile Header -->
+    <header class="md:hidden flex items-center justify-between px-4 py-3 bg-white border-b border-slate-200 sticky top-0 z-40">
+        <div class="flex items-center gap-2">
+            <div class="w-8 h-8 rounded-xl bg-orange-500 flex items-center justify-center text-white font-black text-lg shadow-md shadow-orange-500/20">
+                T
+            </div>
+            <span class="font-extrabold text-xl tracking-tight text-slate-900">Tata<span class="text-orange-500">Dana</span></span>
+        </div>
+        <button id="mobile-menu-btn" class="p-2 rounded-lg text-slate-600 hover:bg-slate-100">
+            <i data-lucide="menu" class="w-6 h-6"></i>
+        </button>
+    </header>
+
+    <!-- Sidebar Desktop -->
+    <aside id="sidebar" class="hidden md:flex flex-col w-64 bg-white border-r border-slate-200 h-screen sticky top-0 z-30 transition-all duration-300">
+        <!-- Logo -->
+        <div class="p-6 border-b border-slate-100 flex items-center justify-between">
+            <a href="/dashboard" class="flex items-center gap-2.5">
+                <div class="w-9 h-9 rounded-xl bg-gradient-to-tr from-orange-600 to-orange-400 flex items-center justify-center text-white font-extrabold text-xl shadow-lg shadow-orange-500/25">
+                    T
+                </div>
+                <div>
+                    <span class="font-black text-xl tracking-tight text-slate-900 block leading-none">Tata<span class="text-orange-500">Dana</span></span>
+                    <span class="text-[10px] text-slate-400 tracking-wider font-semibold uppercase block mt-1">Smart FinTech</span>
+                </div>
+            </a>
+        </div>
+
+        <!-- Navigation Links -->
+        <nav class="flex-1 px-4 py-6 space-y-1.5 overflow-y-auto">
+            <a href="/dashboard" class="nav-link flex items-center gap-3 px-3.5 py-2.5 rounded-xl font-medium text-sm transition-colors {% if active_page == 'beranda' %}bg-orange-50 text-orange-600 font-semibold{% else %}text-slate-600 hover:bg-slate-50 hover:text-slate-900{% endif %}">
+                <i data-lucide="home" class="w-5 h-5"></i>
+                <span>Beranda</span>
+            </a>
+            <a href="/dashboard/transaksi" class="nav-link flex items-center gap-3 px-3.5 py-2.5 rounded-xl font-medium text-sm transition-colors {% if active_page == 'transaksi' %}bg-orange-50 text-orange-600 font-semibold{% else %}text-slate-600 hover:bg-slate-50 hover:text-slate-900{% endif %}">
+                <i data-lucide="credit-card" class="w-5 h-5"></i>
+                <span>Transaksi</span>
+            </a>
+            <a href="/dashboard/laporan" class="nav-link flex items-center gap-3 px-3.5 py-2.5 rounded-xl font-medium text-sm transition-colors {% if active_page == 'laporan' %}bg-orange-50 text-orange-600 font-semibold{% else %}text-slate-600 hover:bg-slate-50 hover:text-slate-900{% endif %}">
+                <i data-lucide="bar-chart-3" class="w-5 h-5"></i>
+                <span>Laporan</span>
+            </a>
+            <a href="/dashboard/budget" class="nav-link flex items-center gap-3 px-3.5 py-2.5 rounded-xl font-medium text-sm transition-colors {% if active_page == 'budget' %}bg-orange-50 text-orange-600 font-semibold{% else %}text-slate-600 hover:bg-slate-50 hover:text-slate-900{% endif %}">
+                <i data-lucide="target" class="w-5 h-5"></i>
+                <span>Budget</span>
+            </a>
+            <a href="/dashboard/wallet" class="nav-link flex items-center gap-3 px-3.5 py-2.5 rounded-xl font-medium text-sm transition-colors {% if active_page == 'wallet' %}bg-orange-50 text-orange-600 font-semibold{% else %}text-slate-600 hover:bg-slate-50 hover:text-slate-900{% endif %}">
+                <i data-lucide="wallet" class="w-5 h-5"></i>
+                <span>Dompet</span>
+            </a>
+            <a href="/dashboard/settings" class="nav-link flex items-center gap-3 px-3.5 py-2.5 rounded-xl font-medium text-sm transition-colors {% if active_page == 'settings' %}bg-orange-50 text-orange-600 font-semibold{% else %}text-slate-600 hover:bg-slate-50 hover:text-slate-900{% endif %}">
+                <i data-lucide="settings" class="w-5 h-5"></i>
+                <span>Settings</span>
+            </a>
+
+            {% if user and user.role == 'superadmin' %}
+            <div class="pt-4 mt-4 border-t border-slate-100">
+                <div class="px-3 pb-2 text-[11px] font-bold text-slate-400 uppercase tracking-wider">Superadmin</div>
+                <a href="/admin" class="flex items-center gap-3 px-3.5 py-2.5 rounded-xl font-medium text-sm text-purple-700 bg-purple-50 hover:bg-purple-100 transition-colors">
+                    <i data-lucide="shield-check" class="w-5 h-5"></i>
+                    <span>Admin Panel</span>
+                </a>
+            </div>
+            {% endif %}
+        </nav>
+
+        <!-- User Profile Card in Sidebar -->
+        <div class="p-4 border-t border-slate-100 bg-slate-50/50">
+            <div class="flex items-center gap-3 mb-3">
+                <div class="w-10 h-10 rounded-full bg-orange-100 border border-orange-200 flex items-center justify-center text-orange-600 font-bold text-sm">
+                    {{ user.full_name[:2].upper() if user else 'TD' }}
+                </div>
+                <div class="flex-1 min-w-0">
+                    <div class="font-semibold text-sm text-slate-900 truncate">{{ user.full_name if user else 'Pengguna' }}</div>
+                    <div class="flex items-center gap-1.5 mt-0.5">
+                        <span class="inline-flex items-center px-1.5 py-0.5 rounded text-[10px] font-bold uppercase tracking-wider {% if user and user.plan == 'pro' %}bg-gradient-to-r from-amber-500 to-orange-500 text-white{% else %}bg-slate-200 text-slate-700{% endif %}">
+                            {{ user.plan.upper() if user else 'STARTER' }}
+                        </span>
+                        {% if user and user.plan != 'pro' %}
+                        <a href="/dashboard/settings?tab=plan" class="text-[11px] font-semibold text-orange-600 hover:underline">Upgrade</a>
+                        {% endif %}
+                    </div>
+                </div>
+            </div>
+            <button onclick="handleLogout()" class="w-full flex items-center justify-center gap-2 py-2 px-3 text-xs font-semibold text-slate-600 hover:text-red-600 hover:bg-red-50 rounded-lg transition-colors">
+                <i data-lucide="log-out" class="w-4 h-4"></i>
+                <span>Keluar Akun</span>
+            </button>
+        </div>
+    </aside>
+
+    <!-- Mobile Navigation Drawer Overlay -->
+    <div id="mobile-drawer" class="fixed inset-0 bg-slate-900/50 z-50 hidden transition-opacity">
+        <div class="w-4/5 max-w-xs bg-white h-full p-6 flex flex-col justify-between">
+            <div>
+                <div class="flex items-center justify-between pb-4 border-b border-slate-100">
+                    <span class="font-extrabold text-xl text-slate-900">Tata<span class="text-orange-500">Dana</span></span>
+                    <button id="close-drawer-btn" class="p-1 text-slate-500 hover:text-slate-800">&times;</button>
+                </div>
+                <div class="py-4 space-y-2">
+                    <a href="/dashboard" class="block py-2 text-slate-700 font-medium">Beranda</a>
+                    <a href="/dashboard/transaksi" class="block py-2 text-slate-700 font-medium">Transaksi</a>
+                    <a href="/dashboard/laporan" class="block py-2 text-slate-700 font-medium">Laporan</a>
+                    <a href="/dashboard/budget" class="block py-2 text-slate-700 font-medium">Budget</a>
+                    <a href="/dashboard/wallet" class="block py-2 text-slate-700 font-medium">Dompet</a>
+                    <a href="/dashboard/settings" class="block py-2 text-slate-700 font-medium">Settings</a>
+                    {% if user and user.role == 'superadmin' %}
+                    <a href="/admin" class="block py-2 text-purple-700 font-bold">Admin Panel</a>
+                    {% endif %}
+                </div>
+            </div>
+            <button onclick="handleLogout()" class="w-full py-2.5 text-center text-sm font-semibold text-red-600 bg-red-50 rounded-xl">Keluar</button>
+        </div>
+    </div>
+
+    <!-- Main Content Area -->
+    <main class="flex-1 flex flex-col min-w-0 overflow-y-auto">
+        <!-- Top App Bar -->
+        <div class="bg-white border-b border-slate-200 px-6 py-4 flex items-center justify-between sticky top-0 z-20">
+            <div>
+                <h1 class="text-xl font-bold text-slate-900">{% block page_title %}Beranda{% endblock %}</h1>
+                <p class="text-xs text-slate-500 mt-0.5">{% block page_subtitle %}Ringkasan finansial dan aktivitas dompet Anda{% endblock %}</p>
+            </div>
+            <div class="flex items-center gap-3">
+                <button onclick="openModal('add-tx-modal')" class="btn-primary flex items-center gap-2 px-4 py-2 rounded-xl text-xs font-bold shadow-md shadow-orange-500/20">
+                    <i data-lucide="plus" class="w-4 h-4"></i>
+                    <span>Catat Transaksi</span>
+                </button>
+            </div>
+        </div>
+
+        <!-- Page Body Content -->
+        <div class="p-6 md:p-8 flex-1">
+            {% block content %}{% endblock %}
+        </div>
+    </main>
+</div>
+
+<!-- Modal: Quick Add Transaction -->
+<div id="add-tx-modal" class="fixed inset-0 bg-slate-900/40 backdrop-blur-sm z-50 hidden items-center justify-center p-4">
+    <div class="bg-white rounded-2xl max-w-md w-full p-6 shadow-2xl relative animate-in fade-in zoom-in-95 duration-200">
+        <button onclick="closeModal('add-tx-modal')" class="absolute top-5 right-5 text-slate-400 hover:text-slate-600 text-xl font-bold">&times;</button>
+        <h3 class="text-lg font-bold text-slate-900 mb-1">Catat Transaksi Baru</h3>
+        <p class="text-xs text-slate-500 mb-5">Transaksi akan otomatis memperbarui saldo dompet Anda.</p>
+
+        <form id="quick-tx-form" onsubmit="handleQuickTxSubmit(event)" class="space-y-4">
+            <!-- Type Tabs -->
+            <div class="grid grid-cols-3 gap-2 p-1 bg-slate-100 rounded-xl text-xs font-semibold">
+                <button type="button" onclick="setTxType('expense')" id="type-btn-expense" class="py-2 rounded-lg bg-white text-orange-600 shadow-sm">Pengeluaran</button>
+                <button type="button" onclick="setTxType('income')" id="type-btn-income" class="py-2 rounded-lg text-slate-600 hover:text-slate-900">Pemasukan</button>
+                <button type="button" onclick="setTxType('transfer')" id="type-btn-transfer" class="py-2 rounded-lg text-slate-600 hover:text-slate-900">Transfer</button>
+            </div>
+
+            <input type="hidden" id="modal-tx-type" value="expense">
+
+            <!-- Nominal -->
+            <div>
+                <label class="block text-xs font-semibold text-slate-700 mb-1">Nominal (Rp)</label>
+                <input type="number" id="modal-tx-amount" required min="1" placeholder="Contoh: 50000" class="input-orange w-full px-3.5 py-2.5 rounded-xl border border-slate-200 text-sm font-medium">
+            </div>
+
+            <!-- Wallet -->
+            <div>
+                <label class="block text-xs font-semibold text-slate-700 mb-1" id="label-source-wallet">Dompet</label>
+                <select id="modal-tx-wallet" required class="input-orange w-full px-3.5 py-2.5 rounded-xl border border-slate-200 text-sm font-medium bg-white">
+                    <!-- Populated dynamically -->
+                </select>
+            </div>
+
+            <!-- Target Wallet for Transfer -->
+            <div id="target-wallet-container" class="hidden">
+                <label class="block text-xs font-semibold text-slate-700 mb-1">Ke Dompet Tujuan</label>
+                <select id="modal-tx-target-wallet" class="input-orange w-full px-3.5 py-2.5 rounded-xl border border-slate-200 text-sm font-medium bg-white">
+                    <!-- Populated dynamically -->
+                </select>
+            </div>
+
+            <!-- Category (hidden for transfer) -->
+            <div id="category-container">
+                <label class="block text-xs font-semibold text-slate-700 mb-1">Kategori</label>
+                <select id="modal-tx-category" class="input-orange w-full px-3.5 py-2.5 rounded-xl border border-slate-200 text-sm font-medium bg-white">
+                    <!-- Populated dynamically -->
+                </select>
+            </div>
+
+            <!-- Catatan -->
+            <div>
+                <label class="block text-xs font-semibold text-slate-700 mb-1">Catatan</label>
+                <input type="text" id="modal-tx-note" placeholder="Keterangan singkat..." class="input-orange w-full px-3.5 py-2.5 rounded-xl border border-slate-200 text-sm font-medium">
+            </div>
+
+            <button type="submit" id="btn-save-tx" class="btn-primary w-full py-2.5 rounded-xl text-sm font-bold mt-2">
+                Simpan Transaksi
+            </button>
+        </form>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+    let cachedWallets = [];
+    let cachedCategories = [];
+
+    async function loadQuickModalData() {
+        try {
+            const [wRes, cRes] = await Promise.all([
+                apiCall("/api/wallets"),
+                apiCall("/api/categories")
+            ]);
+            cachedWallets = wRes.data || [];
+            cachedCategories = cRes.data || [];
+
+            populateModalSelectors();
+        } catch (e) {
+            console.error("Gagal memuat data modal", e);
+        }
+    }
+
+    function populateModalSelectors() {
+        const wSelect = document.getElementById("modal-tx-wallet");
+        const twSelect = document.getElementById("modal-tx-target-wallet");
+        const cSelect = document.getElementById("modal-tx-category");
+
+        if (wSelect) {
+            wSelect.innerHTML = cachedWallets.map(w => `<option value="${w.id}">${w.icon || '👛'} ${w.name} (Rp ${w.balance.toLocaleString('id-ID')})</option>`).join('');
+        }
+        if (twSelect) {
+            twSelect.innerHTML = cachedWallets.map(w => `<option value="${w.id}">${w.icon || '👛'} ${w.name}</option>`).join('');
+        }
+
+        updateCategoryDropdown();
+    }
+
+    function updateCategoryDropdown() {
+        const cSelect = document.getElementById("modal-tx-category");
+        const type = document.getElementById("modal-tx-type").value;
+        if (!cSelect) return;
+
+        const filtered = cachedCategories.filter(c => c.type === (type === 'income' ? 'income' : 'expense'));
+        cSelect.innerHTML = filtered.map(c => `<option value="${c.id}">${c.icon || '🏷️'} ${c.name}</option>`).join('');
+    }
+
+    function setTxType(type) {
+        document.getElementById("modal-tx-type").value = type;
+        const btnExp = document.getElementById("type-btn-expense");
+        const btnInc = document.getElementById("type-btn-income");
+        const btnTrf = document.getElementById("type-btn-transfer");
+        const catContainer = document.getElementById("category-container");
+        const targetContainer = document.getElementById("target-wallet-container");
+        const labelSource = document.getElementById("label-source-wallet");
+
+        [btnExp, btnInc, btnTrf].forEach(b => {
+            b.className = "py-2 rounded-lg text-slate-600 hover:text-slate-900";
+        });
+
+        if (type === "expense") {
+            btnExp.className = "py-2 rounded-lg bg-white text-orange-600 shadow-sm font-bold";
+            catContainer.classList.remove("hidden");
+            targetContainer.classList.add("hidden");
+            labelSource.innerText = "Dompet Sumber";
+        } else if (type === "income") {
+            btnInc.className = "py-2 rounded-lg bg-white text-emerald-600 shadow-sm font-bold";
+            catContainer.classList.remove("hidden");
+            targetContainer.classList.add("hidden");
+            labelSource.innerText = "Masuk ke Dompet";
+        } else if (type === "transfer") {
+            btnTrf.className = "py-2 rounded-lg bg-white text-blue-600 shadow-sm font-bold";
+            catContainer.classList.add("hidden");
+            targetContainer.classList.remove("hidden");
+            labelSource.innerText = "Dari Dompet";
+        }
+
+        updateCategoryDropdown();
+    }
+
+    async function handleQuickTxSubmit(e) {
+        e.preventDefault();
+        const type = document.getElementById("modal-tx-type").value;
+        const amount = parseFloat(document.getElementById("modal-tx-amount").value);
+        const wallet_id = document.getElementById("modal-tx-wallet").value;
+        const target_wallet_id = document.getElementById("modal-tx-target-wallet").value;
+        const category_id = document.getElementById("modal-tx-category").value;
+        const note = document.getElementById("modal-tx-note").value;
+
+        const btn = document.getElementById("btn-save-tx");
+        btn.disabled = true;
+        btn.innerText = "Menyimpan...";
+
+        try {
+            await apiCall("/api/transactions", {
+                method: "POST",
+                body: JSON.stringify({
+                    type,
+                    amount,
+                    wallet_id,
+                    target_wallet_id: type === "transfer" ? target_wallet_id : null,
+                    category_id: type === "transfer" ? null : category_id,
+                    note
+                })
+            });
+
+            showToast("Transaksi berhasil dicatat!", "success");
+            closeModal("add-tx-modal");
+            document.getElementById("quick-tx-form").reset();
+
+            // Refresh current page data if listener exists
+            if (window.refreshPageData) {
+                window.refreshPageData();
+            } else {
+                setTimeout(() => window.location.reload(), 600);
+            }
+        } catch (err) {
+            showToast(err.message, "error");
+        } finally {
+            btn.disabled = false;
+            btn.innerText = "Simpan Transaksi";
+        }
+    }
+
+    async function handleLogout() {
+        try {
+            await apiCall("/api/auth/logout", { method: "POST" });
+            window.location.href = "/login";
+        } catch (e) {
+            window.location.href = "/login";
+        }
+    }
+
+    document.addEventListener("DOMContentLoaded", () => {
+        loadQuickModalData();
+
+        const menuBtn = document.getElementById("mobile-menu-btn");
+        const drawer = document.getElementById("mobile-drawer");
+        const closeBtn = document.getElementById("close-drawer-btn");
+
+        if (menuBtn && drawer) {
+            menuBtn.addEventListener("click", () => drawer.classList.remove("hidden"));
+        }
+        if (closeBtn && drawer) {
+            closeBtn.addEventListener("click", () => drawer.classList.add("hidden"));
+        }
+    });
+</script>
+{% endblock %}

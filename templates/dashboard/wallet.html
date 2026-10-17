@@ -1,0 +1,250 @@
+{% extends "dashboard/layout.html" %}
+
+{% block page_title %}Dompet & Rekening{% endblock %}
+{% block page_subtitle %}Kelola beberapa rekening bank, e-wallet, dan uang tunai Anda di satu tempat{% endblock %}
+
+{% block content %}
+<div class="space-y-6">
+    <!-- Top Action Card -->
+    <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-4 card-premium p-6">
+        <div>
+            <h3 class="font-bold text-slate-900 text-base">Manajemen Multi-Dompet</h3>
+            <p class="text-xs text-slate-500 mt-0.5">Pilih salah satu dompet sebagai default untuk mencatat transaksi langsung dari bot Telegram.</p>
+        </div>
+        <div class="flex items-center gap-2">
+            <button onclick="openModal('transfer-wallet-modal')" class="px-4 py-2.5 rounded-xl border border-slate-200 hover:bg-slate-50 text-slate-700 font-bold text-xs flex items-center gap-2">
+                <i data-lucide="arrow-left-right" class="w-4 h-4"></i>
+                <span>Transfer Antar Dompet</span>
+            </button>
+            <button onclick="openModal('add-wallet-modal')" class="btn-primary px-4 py-2.5 rounded-xl text-xs font-bold flex items-center gap-2">
+                <i data-lucide="plus" class="w-4 h-4"></i>
+                <span>Tambah Dompet</span>
+            </button>
+        </div>
+    </div>
+
+    <!-- Wallets Grid -->
+    <div id="wallets-grid" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-5">
+        <div class="card-premium p-6 text-center text-xs text-slate-400 col-span-full">Memuat dompet Anda...</div>
+    </div>
+</div>
+
+<!-- Modal: Tambah Dompet -->
+<div id="add-wallet-modal" class="fixed inset-0 bg-slate-900/40 backdrop-blur-sm z-50 hidden items-center justify-center p-4">
+    <div class="bg-white rounded-2xl max-w-md w-full p-6 shadow-2xl relative">
+        <button onclick="closeModal('add-wallet-modal')" class="absolute top-5 right-5 text-slate-400 hover:text-slate-600 text-xl font-bold">&times;</button>
+        <h3 class="text-base font-bold text-slate-900 mb-1">Tambah Dompet Baru</h3>
+        <p class="text-xs text-slate-500 mb-5">Daftarkan rekening bank, e-wallet, atau pos dana lainnya.</p>
+
+        <form id="add-wallet-form" onsubmit="handleCreateWallet(event)" class="space-y-4">
+            <div>
+                <label class="block text-xs font-semibold text-slate-700 mb-1">Nama Dompet</label>
+                <input type="text" id="w-name" required placeholder="Contoh: Bank Mandiri / OVO" class="input-orange w-full px-3.5 py-2.5 rounded-xl border border-slate-200 text-sm">
+            </div>
+
+            <div class="grid grid-cols-2 gap-3">
+                <div>
+                    <label class="block text-xs font-semibold text-slate-700 mb-1">Tipe</label>
+                    <select id="w-type" class="input-orange w-full px-3.5 py-2.5 rounded-xl border border-slate-200 text-sm bg-white">
+                        <option value="bank">Bank Transfer</option>
+                        <option value="ewallet">E-Wallet</option>
+                        <option value="cash">Uang Tunai (Cash)</option>
+                        <option value="investment">Investasi</option>
+                        <option value="other">Lainnya</option>
+                    </select>
+                </div>
+                <div>
+                    <label class="block text-xs font-semibold text-slate-700 mb-1">Icon Emoji</label>
+                    <input type="text" id="w-icon" value="🏦" class="input-orange w-full px-3.5 py-2.5 rounded-xl border border-slate-200 text-sm text-center">
+                </div>
+            </div>
+
+            <div>
+                <label class="block text-xs font-semibold text-slate-700 mb-1">Saldo Awal (Rp)</label>
+                <input type="number" id="w-balance" placeholder="0" min="0" class="input-orange w-full px-3.5 py-2.5 rounded-xl border border-slate-200 text-sm">
+            </div>
+
+            <div class="flex items-center gap-2 pt-1">
+                <input type="checkbox" id="w-default" class="rounded text-orange-500 focus:ring-orange-400">
+                <label for="w-default" class="text-xs text-slate-700 font-medium">Jadikan dompet utama (default untuk Telegram)</label>
+            </div>
+
+            <button type="submit" id="btn-submit-wallet" class="btn-primary w-full py-2.5 rounded-xl text-sm font-bold mt-2">
+                Simpan Dompet
+            </button>
+        </form>
+    </div>
+</div>
+
+<!-- Modal: Transfer Antar Dompet -->
+<div id="transfer-wallet-modal" class="fixed inset-0 bg-slate-900/40 backdrop-blur-sm z-50 hidden items-center justify-center p-4">
+    <div class="bg-white rounded-2xl max-w-md w-full p-6 shadow-2xl relative">
+        <button onclick="closeModal('transfer-wallet-modal')" class="absolute top-5 right-5 text-slate-400 hover:text-slate-600 text-xl font-bold">&times;</button>
+        <h3 class="text-base font-bold text-slate-900 mb-1">Transfer Antar Dompet</h3>
+        <p class="text-xs text-slate-500 mb-5">Pindahkan saldo dari satu dompet ke dompet lainnya secara instan.</p>
+
+        <form id="transfer-wallet-form" onsubmit="handleTransferSubmit(event)" class="space-y-4">
+            <div>
+                <label class="block text-xs font-semibold text-slate-700 mb-1">Dari Dompet Asal</label>
+                <select id="trf-source" required class="input-orange w-full px-3.5 py-2.5 rounded-xl border border-slate-200 text-sm bg-white"></select>
+            </div>
+
+            <div>
+                <label class="block text-xs font-semibold text-slate-700 mb-1">Ke Dompet Tujuan</label>
+                <select id="trf-target" required class="input-orange w-full px-3.5 py-2.5 rounded-xl border border-slate-200 text-sm bg-white"></select>
+            </div>
+
+            <div>
+                <label class="block text-xs font-semibold text-slate-700 mb-1">Nominal Transfer (Rp)</label>
+                <input type="number" id="trf-amount" required min="1" placeholder="Contoh: 100000" class="input-orange w-full px-3.5 py-2.5 rounded-xl border border-slate-200 text-sm">
+            </div>
+
+            <div>
+                <label class="block text-xs font-semibold text-slate-700 mb-1">Catatan (Opsional)</label>
+                <input type="text" id="trf-note" placeholder="Top up GoPay, Tarik tunai ATM, dll" class="input-orange w-full px-3.5 py-2.5 rounded-xl border border-slate-200 text-sm">
+            </div>
+
+            <button type="submit" id="btn-submit-transfer" class="btn-primary w-full py-2.5 rounded-xl text-sm font-bold mt-2">
+                Konfirmasi Transfer
+            </button>
+        </form>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+{{ super() }}
+<script>
+    let walletsData = [];
+
+    async function loadWallets() {
+        const grid = document.getElementById("wallets-grid");
+        try {
+            const res = await apiCall("/api/wallets");
+            walletsData = res.data || [];
+
+            if (walletsData.length === 0) {
+                grid.innerHTML = `<div class="card-premium p-8 text-center text-xs text-slate-400 col-span-full">Belum ada dompet. Klik <b>Tambah Dompet</b> untuk mulai.</div>`;
+                return;
+            }
+
+            grid.innerHTML = walletsData.map(w => {
+                const isDefault = w.is_default === 1 || w.is_default === true;
+                return `
+                <div class="card-premium p-5 flex flex-col justify-between border-t-4 border-t-orange-500 relative">
+                    ${isDefault ? `
+                        <span class="absolute top-4 right-4 px-2 py-0.5 rounded-full text-[10px] font-bold bg-orange-100 text-orange-700 flex items-center gap-1">
+                            ★ Default Bot
+                        </span>
+                    ` : `
+                        <button onclick="setDefaultWallet('${w.id}')" class="absolute top-4 right-4 text-[11px] font-semibold text-slate-400 hover:text-orange-600 hover:underline">
+                            Set Default
+                        </button>
+                    `}
+
+                    <div>
+                        <div class="w-12 h-12 rounded-2xl bg-orange-50 border border-orange-100 flex items-center justify-center text-2xl mb-4">
+                            ${w.icon || '👛'}
+                        </div>
+                        <h4 class="font-bold text-base text-slate-900">${w.name}</h4>
+                        <span class="text-xs uppercase font-semibold text-slate-400 tracking-wider">${w.type}</span>
+                    </div>
+
+                    <div class="mt-6 pt-4 border-t border-slate-100 flex items-baseline justify-between">
+                        <span class="text-xs text-slate-400">Saldo:</span>
+                        <span class="text-xl font-black text-slate-900">${formatIDR(w.balance)}</span>
+                    </div>
+                </div>
+                `;
+            }).join('');
+
+            populateTransferSelectors();
+        } catch (e) {
+            grid.innerHTML = `<div class="card-premium p-6 text-center text-xs text-red-500 col-span-full">Gagal memuat dompet: ${e.message}</div>`;
+        }
+    }
+
+    function populateTransferSelectors() {
+        const sSelect = document.getElementById("trf-source");
+        const tSelect = document.getElementById("trf-target");
+        if (sSelect && tSelect) {
+            const options = walletsData.map(w => `<option value="${w.id}">${w.icon || '👛'} ${w.name} (${formatIDR(w.balance)})</option>`).join('');
+            sSelect.innerHTML = options;
+            tSelect.innerHTML = options;
+            if (walletsData.length > 1) {
+                tSelect.selectedIndex = 1;
+            }
+        }
+    }
+
+    async function setDefaultWallet(walletId) {
+        try {
+            await apiCall(`/api/wallets/${walletId}`, {
+                method: "PUT",
+                body: JSON.stringify({ is_default: true })
+            });
+            showToast("Dompet default bot berhasil diubah!", "success");
+            loadWallets();
+        } catch (err) {
+            showToast(err.message, "error");
+        }
+    }
+
+    async function handleCreateWallet(e) {
+        e.preventDefault();
+        const name = document.getElementById("w-name").value;
+        const type = document.getElementById("w-type").value;
+        const icon = document.getElementById("w-icon").value;
+        const balance = parseFloat(document.getElementById("w-balance").value) || 0;
+        const is_default = document.getElementById("w-default").checked;
+
+        const btn = document.getElementById("btn-submit-wallet");
+        btn.disabled = true;
+
+        try {
+            await apiCall("/api/wallets", {
+                method: "POST",
+                body: JSON.stringify({ name, type, icon, initial_balance: balance, is_default })
+            });
+            showToast("Dompet baru berhasil dibuat!", "success");
+            closeModal("add-wallet-modal");
+            document.getElementById("add-wallet-form").reset();
+            loadWallets();
+        } catch (err) {
+            showToast(err.message, "error");
+        } finally {
+            btn.disabled = false;
+        }
+    }
+
+    async function handleTransferSubmit(e) {
+        e.preventDefault();
+        const source_wallet_id = document.getElementById("trf-source").value;
+        const target_wallet_id = document.getElementById("trf-target").value;
+        const amount = parseFloat(document.getElementById("trf-amount").value);
+        const note = document.getElementById("trf-note").value;
+
+        if (source_wallet_id === target_wallet_id) {
+            showToast("Dompet asal dan tujuan tidak boleh sama!", "error");
+            return;
+        }
+
+        try {
+            await apiCall("/api/wallets/transfer", {
+                method: "POST",
+                body: JSON.stringify({ source_wallet_id, target_wallet_id, amount, note })
+            });
+            showToast("Transfer berhasil dicatat!", "success");
+            closeModal("transfer-wallet-modal");
+            document.getElementById("transfer-wallet-form").reset();
+            loadWallets();
+        } catch (err) {
+            showToast(err.message, "error");
+        }
+    }
+
+    document.addEventListener("DOMContentLoaded", () => {
+        loadWallets();
+    });
+</script>
+{% endblock %}

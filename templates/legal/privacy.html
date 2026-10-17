@@ -1,0 +1,60 @@
+{% extends "base.html" %}
+
+{% block title %}Kebijakan Privasi — TataDana{% endblock %}
+
+{% block body %}
+<nav class="sticky top-0 z-50 bg-white/90 backdrop-blur-md border-b border-slate-100">
+    <div class="max-w-5xl mx-auto px-4 h-16 flex items-center justify-between">
+        <a href="/" class="flex items-center gap-2">
+            <div class="w-8 h-8 rounded-xl bg-orange-500 text-white font-black flex items-center justify-center">T</div>
+            <span class="font-black text-lg text-slate-900">Tata<span class="text-orange-500">Dana</span></span>
+        </a>
+        <a href="/" class="text-xs font-bold text-slate-600 hover:text-orange-600 flex items-center gap-1">
+            &larr; Kembali ke Beranda
+        </a>
+    </div>
+</nav>
+
+<main class="max-w-4xl mx-auto px-4 py-12 flex-1">
+    <div class="bg-white p-8 md:p-12 rounded-3xl border border-slate-200 shadow-sm text-slate-700 space-y-6 text-sm leading-relaxed">
+        <span class="px-3 py-1 rounded-full text-xs font-bold bg-orange-100 text-orange-700 uppercase tracking-wider">Legal & Kepatuhan</span>
+        <h1 class="text-3xl font-black text-slate-900">Kebijakan Privasi TataDana</h1>
+        <p class="text-xs text-slate-400">Terakhir diperbarui: 17 Oktober 2026</p>
+
+        <section class="space-y-3 pt-4 border-t border-slate-100">
+            <h2 class="text-lg font-bold text-slate-900">1. Komitmen Keamanan Data Finansial</h2>
+            <p>
+                TataDana berkomitmen penuh untuk menjaga kerahasiaan dan privasi data transaksi keuangan pengguna. Kami tidak pernah dan tidak akan pernah menjual, menyewakan, atau membagikan riwayat transaksi finansial Anda kepada pihak ketiga atau pengiklan mana pun.
+            </p>
+        </section>
+
+        <section class="space-y-3">
+            <h2 class="text-lg font-bold text-slate-900">2. Penyimpanan & Isolasi Data (Supabase RLS)</h2>
+            <p>
+                Semua data Anda disimpan di infrastruktur database PostgreSQL Supabase dengan aturan <b>Row Level Security (RLS)</b> yang aktif secara menyeluruh. Hal ini memastikan bahwa data keuangan hanya dapat diakses oleh akun pemilik data yang sah.
+            </p>
+        </section>
+
+        <section class="space-y-3">
+            <h2 class="text-lg font-bold text-slate-900">3. Enkripsi Kunci & Token Telegram</h2>
+            <p>
+                Token Bot Telegram, API key penyedia AI, dan kunci sensitif lainnya disimpan menggunakan enkripsi simetris Fernet (standar AES-128). Kata sandi akun Anda dilindungi dengan algoritma hashing Argon2/Bcrypt satu arah.
+            </p>
+        </section>
+
+        <section class="space-y-3">
+            <h2 class="text-lg font-bold text-slate-900">4. Transparansi Audit Superadmin</h2>
+            <p>
+                Setiap tindakan staf teknis dalam menangani bantuan troubleshooting yang melibatkan inspeksi data transaksi secara otomatis dicatat ke dalam log audit permanen yang tidak dapat dimanipulasi (*immutable audit logs*).
+            </p>
+        </section>
+
+        <section class="space-y-3">
+            <h2 class="text-lg font-bold text-slate-900">5. Kontak Privasi</h2>
+            <p>
+                Jika Anda memiliki pertanyaan terkait privasi data Anda, silakan hubungi tim kepatuhan privasi kami melalui email: <b>privacy@tatadana.id</b>.
+            </p>
+        </section>
+    </div>
+</main>
+{% endblock %}
