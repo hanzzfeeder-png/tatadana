@@ -1,3 +1,4 @@
+import os
 import re
 import json
 import uuid
@@ -108,29 +109,73 @@ class TelegramService:
 
     @staticmethod
     def get_current_bot_token() -> Optional[str]:
-        conn = get_db()
-        cursor = conn.cursor()
-        cursor.execute("SELECT bot_token_encrypted FROM bot_settings WHERE is_connected = 1 LIMIT 1")
-        row = cursor.fetchone()
-        conn.close()
-        if row and row["bot_token_encrypted"]:
-            return settings.decrypt(row["bot_token_encrypted"])
-        return settings.TELEGRAM_BOT_TOKEN or None
+        # 1. Prioritas Utama: Environment variable langsung (selalu segar & tidak bergantung database)
+        env_token = os.getenv("TELEGRAM_BOT_TOKEN", "").strip()
+        if env_token:
+            return env_token
+        if getattr(settings, "TELEGRAM_BOT_TOKEN", None) and settings.TELEGRAM_BOT_TOKEN.strip():
+            return settings.TELEGRAM_BOT_TOKEN.strip()
+
+        # 2. Fallback: Cek tabel bot_settings di database
+        try:
+            conn = get_db()
+            cursor = conn.cursor()
+            cursor.execute("SELECT bot_token_encrypted FROM bot_settings WHERE is_connected = 1 LIMIT 1")
+            row = cursor.fetchone()
+            conn.close()
+            if row and row["bot_token_encrypted"]:
+                decrypted = settings.decrypt(row["bot_token_encrypted"])
+                if decrypted and ":" in decrypted:
+                    return decrypted
+        except Exception as e:
+            print(f"[WARN] Gagal membaca bot_token dari database: {e}")
+
+        return None
 
     @staticmethod
-    async def send_telegram_message(chat_id: int, text: str, parse_mode: str = "Markdown") -> bool:
+    async def send_telegram_message(chat_id: int, text: str, parse_mode: Optional[str] = "Markdown") -> bool:
         token = TelegramService.get_current_bot_token()
         if not token:
+            print(f"[TELEGRAM ERROR] Gagal mengirim pesan: TELEGRAM_BOT_TOKEN kosong atau belum disetel di Railway environment variables!")
             return False
+
+        masked = f"{token[:6]}...{token[-4:]}" if len(token) > 10 else "***"
+        print(f"[TELEGRAM SEND] Mengirim pesan ke chat_id={chat_id} (Bot: {masked}, parse_mode={parse_mode})...")
 
         try:
             async with httpx.AsyncClient(timeout=10.0) as client:
+                body = {"chat_id": chat_id, "text": text}
+                if parse_mode:
+                    body["parse_mode"] = parse_mode
+
                 res = await client.post(
                     f"https://api.telegram.org/bot{token}/sendMessage",
-                    json={"chat_id": chat_id, "text": text, "parse_mode": parse_mode}
+                    json=body
                 )
-                return res.status_code == 200
-        except Exception:
+
+                if res.status_code == 200:
+                    print(f"[TELEGRAM SUCCESS] Pesan berhasil terkirim ke chat_id={chat_id}")
+                    return True
+
+                print(f"[TELEGRAM WARN] SendMessage Telegram API merespon HTTP {res.status_code}: {res.text}")
+
+                # Auto-Retry: Jika Telegram menolak karena formatting/parsing entity markdown, kirim ulang sebagai plain text
+                if parse_mode:
+                    print(f"[TELEGRAM RETRY] Mengirim ulang tanpa parse_mode (plain text) ke chat_id={chat_id}...")
+                    retry_res = await client.post(
+                        f"https://api.telegram.org/bot{token}/sendMessage",
+                        json={"chat_id": chat_id, "text": text}
+                    )
+                    if retry_res.status_code == 200:
+                        print(f"[TELEGRAM SUCCESS] Fallback plain text berhasil terkirim ke chat_id={chat_id}")
+                        return True
+                    else:
+                        print(f"[TELEGRAM ERROR] Retry plain text juga gagal HTTP {retry_res.status_code}: {retry_res.text}")
+                        return False
+
+                return False
+        except Exception as e:
+            print(f"[TELEGRAM EXCEPTION] Terjadi error saat menghubungi Telegram API: {e}")
             return False
 
     @staticmethod
@@ -374,17 +419,19 @@ class TelegramService:
 
         # 3. Jika akun belum tertaut dan bukan perintah penautan valid
         if not user:
-            await TelegramService.send_telegram_message(
-                chat_id,
+            print(f"[WEBHOOK] Pengguna Telegram {tg_user_id} (chat_id={chat_id}) belum tertaut. Mengirim panduan selamat datang...")
+            welcome_text = (
                 "👋 *Halo! Selamat datang di TataDana Bot*\n\n"
                 "Akun Telegram kamu belum terhubung dengan akun TataDana.\n\n"
                 "*Cara Menghubungkan Akun Secara Aman:*\n"
-                "1. Buka dan masuk ke **Dashboard Web TataDana**\n"
-                "2. Masuk ke menu **Pengaturan** &rarr; tab **Integrasi Telegram**\n"
-                "3. Klik tombol **Hubungkan Telegram** untuk mendapatkan tautan atau kode penautan 10 menit\n"
+                "1. Buka dan masuk ke *Dashboard Web TataDana*\n"
+                "2. Masuk ke menu *Pengaturan* → tab *Integrasi Telegram*\n"
+                "3. Klik tombol *Hubungkan Telegram* untuk mendapatkan kode penautan (10 menit)\n"
                 "4. Kirim kode tersebut ke sini (contoh: `/start TD-XXXXXX`)."
             )
-            return {"status": "waiting_link"}
+            delivered = await TelegramService.send_telegram_message(chat_id, welcome_text)
+            print(f"[WEBHOOK] Status pengiriman pesan selamat datang: {delivered}")
+            return {"status": "waiting_link", "message_delivered": delivered}
 
         # 4. IDENTITAS TERVERIFIKASI: user_id HANYA diambil dari relasi telegram_links
         user_id = user["id"]

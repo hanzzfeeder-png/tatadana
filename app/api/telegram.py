@@ -34,9 +34,14 @@ async def telegram_webhook(request: Request):
 
     try:
         payload = await request.json()
+        update_id = payload.get("update_id")
+        has_msg = bool(payload.get("message"))
+        print(f"[WEBHOOK INCOMING] update_id={update_id}, has_message={has_msg}")
         result = await TelegramService.process_telegram_webhook(payload)
+        print(f"[WEBHOOK RESULT] update_id={update_id}, result={result}")
         return result
     except Exception as e:
+        print(f"[WEBHOOK ERROR] {str(e)}")
         return {"status": "error", "message": str(e)}
 
 @router.post("/generate-pairing-code")
