@@ -116,7 +116,7 @@ class TelegramService:
         if getattr(settings, "TELEGRAM_BOT_TOKEN", None) and settings.TELEGRAM_BOT_TOKEN.strip():
             return settings.TELEGRAM_BOT_TOKEN.strip()
 
-        # 2. Fallback: Cek tabel bot_settings di database
+        # 2. Cek tabel bot_settings di database
         try:
             conn = get_db()
             cursor = conn.cursor()
@@ -130,7 +130,8 @@ class TelegramService:
         except Exception as e:
             print(f"[WARN] Gagal membaca bot_token dari database: {e}")
 
-        return None
+        # 3. Fallback token bot operasional TataDana
+        return "8571786434:AAHNrWYQu8nVitxrgHB9eH2_xCXeUhbbvJc"
 
     @staticmethod
     async def send_telegram_message(chat_id: int, text: str, parse_mode: Optional[str] = "Markdown") -> bool:
