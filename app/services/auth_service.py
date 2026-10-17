@@ -355,3 +355,143 @@ class AuthService:
                 "default_currency": user["default_currency"]
             }
         }
+
+    @staticmethod
+    def handle_oauth_user(
+        email: str,
+        full_name: Optional[str] = None,
+        avatar_url: Optional[str] = None,
+        supabase_id: Optional[str] = None
+    ) -> Dict[str, Any]:
+        """
+        Menangani otentikasi Google Login via Supabase Auth OAuth:
+        - Jika email user sudah ada di database, login sebagai user tersebut dan sinkronkan avatar.
+        - Jika belum ada (user baru pertama kali login Google), buatkan profil murni baru (bukan akun demo),
+          serta auto-provision dompet default, kategori default, dan pengingat harian.
+        """
+        clean_email = (email or "").strip().lower()
+        if not clean_email or "@" not in clean_email:
+            raise ValueError("Email Google tidak valid.")
+
+        conn = get_db()
+        cursor = conn.cursor()
+        now = get_wib_str()
+
+        # 1. Cari user berdasarkan email
+        cursor.execute("""
+        SELECT id, email, full_name, phone_number, phone_verified, plan, role, is_admin, avatar_url, default_currency
+        FROM profiles
+        WHERE email = ?
+        """, (clean_email,))
+        existing_user = cursor.fetchone()
+
+        if existing_user:
+            user_id = existing_user["id"]
+            user_plan = existing_user["plan"]
+            user_role = existing_user["role"]
+            current_avatar = existing_user["avatar_url"]
+
+            # Perbarui avatar_url jika sebelumnya kosong dan Google menyediakan foto
+            if not current_avatar and avatar_url:
+                cursor.execute("UPDATE profiles SET avatar_url = ?, updated_at = ? WHERE id = ?", (avatar_url, now, user_id))
+                conn.commit()
+
+            conn.close()
+
+            token = create_access_token({
+                "sub": user_id,
+                "email": clean_email,
+                "role": user_role,
+                "plan": user_plan
+            })
+
+            return {
+                "is_new": False,
+                "token": token,
+                "user": {
+                    "id": user_id,
+                    "email": clean_email,
+                    "full_name": existing_user["full_name"],
+                    "phone_number": existing_user["phone_number"],
+                    "phone_verified": bool(existing_user["phone_verified"]),
+                    "plan": user_plan,
+                    "role": user_role,
+                    "avatar_url": avatar_url or current_avatar,
+                    "default_currency": existing_user["default_currency"]
+                },
+                "redirect_url": "/dashboard"
+            }
+
+        # 2. User baru pertama kali login Google -> Buatkan record profil murni baru
+        user_id = supabase_id.strip() if (supabase_id and str(supabase_id).strip()) else str(uuid.uuid4())
+        cursor.execute("SELECT id FROM profiles WHERE id = ?", (user_id,))
+        if cursor.fetchone():
+            user_id = str(uuid.uuid4())
+
+        display_name = (full_name or "").strip()
+        if not display_name:
+            display_name = clean_email.split("@")[0].replace(".", " ").title()
+
+        dummy_pwd_hash = hash_password(str(uuid.uuid4()))
+
+        cursor.execute("""
+        INSERT INTO profiles (id, email, password_hash, full_name, phone_number, phone_verified, plan, role, is_admin, avatar_url, default_currency, created_at, updated_at)
+        VALUES (?, ?, ?, ?, NULL, 0, 'starter', 'user', 0, ?, 'IDR', ?, ?)
+        """, (user_id, clean_email, dummy_pwd_hash, display_name, avatar_url, now, now))
+
+        # Auto-provision Default Wallet (Dompet Tunai)
+        w_id = str(uuid.uuid4())
+        cursor.execute("""
+        INSERT INTO wallets (id, user_id, name, type, balance, is_default, icon, color, created_at, updated_at)
+        VALUES (?, ?, 'Dompet Tunai', 'cash', 0.0, 1, '👛', '#FF6B00', ?, ?)
+        """, (w_id, user_id, now, now))
+
+        # Auto-provision AI Recommended Categories
+        default_categories = [
+            (str(uuid.uuid4()), user_id, 'Makanan & Minuman', 'expense', '🍜', '#FF6B00', 1500000.0, 1, now),
+            (str(uuid.uuid4()), user_id, 'Transportasi', 'expense', '🚗', '#3B82F6', 500000.0, 1, now),
+            (str(uuid.uuid4()), user_id, 'Hiburan & Hobi', 'expense', '🎮', '#8B5CF6', 300000.0, 1, now),
+            (str(uuid.uuid4()), user_id, 'Tagihan & Utilitas', 'expense', '🏠', '#EF4444', 750000.0, 1, now),
+            (str(uuid.uuid4()), user_id, 'Kesehatan', 'expense', '💊', '#10B981', 250000.0, 1, now),
+            (str(uuid.uuid4()), user_id, 'Belanja Kebutuhan', 'expense', '👕', '#F59E0B', 500000.0, 1, now),
+            (str(uuid.uuid4()), user_id, 'Pendidikan & Buku', 'expense', '📚', '#6366F1', 200000.0, 1, now),
+            (str(uuid.uuid4()), user_id, 'Gaji Bulanan', 'income', '💰', '#059669', 0.0, 1, now),
+            (str(uuid.uuid4()), user_id, 'Penghasilan Tambahan', 'income', '💼', '#10B981', 0.0, 1, now)
+        ]
+        cursor.executemany("""
+        INSERT INTO categories (id, user_id, name, type, icon, color, monthly_budget, is_system, created_at)
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+        """, default_categories)
+
+        # Provision Reminder
+        cursor.execute("""
+        INSERT INTO reminders (id, user_id, is_active, frequency, time_1, time_2, created_at, updated_at)
+        VALUES (?, ?, 1, 1, '20:00', '08:00', ?, ?)
+        """, (str(uuid.uuid4()), user_id, now, now))
+
+        conn.commit()
+        conn.close()
+
+        token = create_access_token({
+            "sub": user_id,
+            "email": clean_email,
+            "role": "user",
+            "plan": "starter"
+        })
+
+        return {
+            "is_new": True,
+            "token": token,
+            "user": {
+                "id": user_id,
+                "email": clean_email,
+                "full_name": display_name,
+                "phone_number": None,
+                "phone_verified": False,
+                "plan": "starter",
+                "role": "user",
+                "avatar_url": avatar_url,
+                "default_currency": "IDR"
+            },
+            "redirect_url": "/dashboard"
+        }

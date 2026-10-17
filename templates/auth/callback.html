@@ -1,0 +1,150 @@
+{% extends "base.html" %}
+
+{% block title %}Memproses Login Google — TataDana{% endblock %}
+
+{% block body %}
+<div class="min-h-screen flex items-center justify-center p-6 bg-[#F8FAFC]">
+    <div class="max-w-md w-full bg-white p-8 md:p-10 rounded-3xl shadow-sm border border-slate-200/80 text-center">
+        <!-- Logo Brand -->
+        <div class="flex items-center justify-center gap-2.5 mb-6">
+            <div class="w-10 h-10 rounded-xl bg-orange-500 text-white flex items-center justify-center font-black text-xl shadow-md shadow-orange-500/20">
+                T
+            </div>
+            <span class="font-extrabold text-2xl text-slate-900 tracking-tight">Tata<span class="text-orange-500">Dana</span></span>
+        </div>
+
+        <!-- Spinner & Processing State -->
+        <div id="callback-loading">
+            <div id="callback-spinner" class="inline-flex items-center justify-center w-14 h-14 rounded-2xl bg-orange-50 text-orange-500 mb-4 animate-pulse">
+                <svg class="animate-spin h-7 w-7 text-orange-600" fill="none" viewBox="0 0 24 24">
+                    <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+                    <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                </svg>
+            </div>
+            <h2 class="text-xl font-bold text-slate-900">Menghubungkan Akun Google</h2>
+            <p id="callback-status-text" class="text-xs text-slate-500 mt-1.5 leading-relaxed">
+                Mohon tunggu beberapa detik, kami sedang memverifikasi sesi dan menyiapkan akun Anda...
+            </p>
+        </div>
+
+        <!-- Error State (Hidden by default) -->
+        <div id="callback-error-box" class="hidden mt-4 p-4 rounded-2xl bg-rose-50 border border-rose-200 text-left">
+            <div class="flex items-start gap-3">
+                <div class="p-1 rounded-lg bg-rose-100 text-rose-600 mt-0.5">
+                    <i data-lucide="alert-circle" class="w-4 h-4"></i>
+                </div>
+                <div>
+                    <h4 class="text-xs font-bold text-rose-900">Gagal Masuk via Google</h4>
+                    <p id="callback-error-message" class="text-[11px] text-rose-700 mt-1 leading-relaxed"></p>
+                </div>
+            </div>
+            <a href="/login" class="mt-4 block w-full py-2.5 text-center text-xs font-bold rounded-xl bg-white border border-rose-200 text-rose-700 hover:bg-rose-100/50 transition-colors">
+                Kembali ke Halaman Login
+            </a>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+{{ super() }}
+<script>
+    const SUPABASE_URL = "{{ supabase_url or '' }}";
+    const SUPABASE_ANON_KEY = "{{ supabase_anon_key or '' }}";
+    let supabase = null;
+    if (window.supabase && SUPABASE_URL && SUPABASE_ANON_KEY) {
+        supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+    }
+
+    async function processAuthCallback() {
+        const statusText = document.getElementById("callback-status-text");
+        const errorBox = document.getElementById("callback-error-box");
+        const errorMsg = document.getElementById("callback-error-message");
+        const loadingBox = document.getElementById("callback-loading");
+
+        try {
+            let session = null;
+            let user = null;
+
+            // 1. Cek parameter error dari Google / Supabase
+            const urlParams = new URLSearchParams(window.location.search);
+            const errParam = urlParams.get("error_description") || urlParams.get("error");
+            if (errParam) {
+                throw new Error(errParam);
+            }
+
+            // 2. Jika Supabase client tersedia, coba pertukaran token
+            if (supabase) {
+                // A. PKCE flow code exchange
+                const code = urlParams.get("code");
+                if (code) {
+                    statusText.innerText = "Memverifikasi kode autentikasi...";
+                    const { data, error } = await supabase.auth.exchangeCodeForSession(code);
+                    if (!error && data?.session) {
+                        session = data.session;
+                        user = data.session.user;
+                    }
+                }
+
+                // B. Hash token flow atau sesi aktif
+                if (!user) {
+                    const { data, error } = await supabase.auth.getSession();
+                    if (!error && data?.session) {
+                        session = data.session;
+                        user = data.session.user;
+                    }
+                }
+            }
+
+            // 3. Fallback jika sesi atau parameter tersedia
+            let email = user?.email || urlParams.get("email");
+            let fullName = user?.user_metadata?.full_name || user?.user_metadata?.name || urlParams.get("name") || "";
+            let avatarUrl = user?.user_metadata?.avatar_url || user?.user_metadata?.picture || "";
+            let supabaseId = user?.id || "";
+
+            if (!email) {
+                // Cek hash jika ada hash fragment
+                if (window.location.hash) {
+                    const hashParams = new URLSearchParams(window.location.hash.substring(1));
+                    const hashError = hashParams.get("error_description") || hashParams.get("error");
+                    if (hashError) throw new Error(hashError);
+                }
+                throw new Error("Sesi Google tidak ditemukan atau dibatalkan. Silakan login kembali.");
+            }
+
+            statusText.innerText = "Menyiapkan profil dan dashboard Anda...";
+
+            // 4. Kirim sesi ke backend untuk membuat profil baru murni atau sinkronkan user
+            const res = await apiCall("/api/auth/oauth-callback", {
+                method: "POST",
+                body: JSON.stringify({
+                    email: email,
+                    full_name: fullName,
+                    avatar_url: avatarUrl,
+                    supabase_id: supabaseId
+                })
+            });
+
+            if (res.success) {
+                statusText.innerText = "Berhasil! Mengalihkan ke dashboard...";
+                setTimeout(() => {
+                    window.location.href = res.redirect || "/dashboard";
+                }, 400);
+            } else {
+                throw new Error(res.message || "Gagal memproses sesi pengguna di server.");
+            }
+        } catch (err) {
+            console.error("Auth callback error:", err);
+            errorMsg.innerText = err.message || "Terjadi kesalahan saat otentikasi Google.";
+            errorBox.classList.remove("hidden");
+            statusText.innerText = "Autentikasi tidak berhasil.";
+            if (window.lucide) window.lucide.createIcons();
+        }
+    }
+
+    document.addEventListener("DOMContentLoaded", () => {
+        if (window.lucide) window.lucide.createIcons();
+        processAuthCallback();
+    });
+</script>
+{% endblock %}

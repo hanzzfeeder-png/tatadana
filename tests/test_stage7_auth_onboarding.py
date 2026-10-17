@@ -232,6 +232,11 @@ class TestStage7AuthAndOnboarding(unittest.TestCase):
         self.assertIn("focus:ring-[#F97316]", html_login)
         self.assertNotIn("Akun Demo Siap Pakai", html_login)
         self.assertNotIn("fillDemoCredentials", html_login)
+        self.assertIn("signInWithOAuth", html_login)
+        self.assertIn("provider: 'google'", html_login)
+        self.assertIn("/auth/callback", html_login)
+        self.assertNotIn("handleGoogleOAuthMock", html_login)
+        self.assertNotIn("demo@tatadana.id", html_login)
 
         # 2. GET /register
         register_page = self.client.get("/register")
@@ -244,6 +249,8 @@ class TestStage7AuthAndOnboarding(unittest.TestCase):
         self.assertIn("Atur Preferensi Finansialmu", html_reg)
         self.assertIn("🍜 Makanan & Minuman", html_reg)
         self.assertIn("focus:ring-[#F97316]", html_reg)
+        self.assertIn("signInWithOAuth", html_reg)
+        self.assertIn("provider: 'google'", html_reg)
 
     def test_08_authenticated_user_redirected_to_dashboard(self):
         """Memastikan user yang telah login otomatis diarahkan (redirect) ke /dashboard jika mengakses /login atau /register"""
@@ -270,6 +277,106 @@ class TestStage7AuthAndOnboarding(unittest.TestCase):
         res_register = self.client.get("/register", follow_redirects=False)
         self.assertEqual(res_register.status_code, 307)
         self.assertEqual(res_register.headers["location"], "/dashboard")
+
+    def test_09_google_oauth_callback_creates_pure_new_profile(self):
+        """
+        Memastikan Google OAuth callback membuat record profil murni baru (bukan akun demo Budi Pratama),
+        mengatur dompet default 'Dompet Tunai', kategori standard, dan memasang cookie tatadana_token.
+        """
+        u_suffix = uuid.uuid4().hex[:6]
+        google_email = f"andi.wijaya.{u_suffix}@gmail.com"
+        google_name = "Andi Wijaya Google"
+        google_avatar = "https://lh3.googleusercontent.com/a/mock-andi.jpg"
+        supabase_uid = str(uuid.uuid4())
+
+        # 1. Test POST /api/auth/oauth-callback
+        res = self.client.post("/api/auth/oauth-callback", json={
+            "email": google_email,
+            "full_name": google_name,
+            "avatar_url": google_avatar,
+            "supabase_id": supabase_uid
+        })
+        self.assertEqual(res.status_code, 200)
+        data = res.json()["data"]
+        self.assertTrue(data["is_new"])
+        self.assertEqual(data["user"]["email"], google_email)
+        self.assertEqual(data["user"]["full_name"], google_name)
+        self.assertNotEqual(data["user"]["full_name"], "Budi Pratama")
+        self.assertNotEqual(data["user"]["email"], "demo@tatadana.id")
+        self.assertIn("tatadana_token", res.cookies)
+
+        # 2. Verifikasi di Database bahwa record murni baru tersimpan
+        conn = get_db()
+        cursor = conn.cursor()
+        cursor.execute("SELECT id, email, full_name, avatar_url, plan FROM profiles WHERE email = ?", (google_email,))
+        p = cursor.fetchone()
+        self.assertIsNotNone(p)
+        self.assertEqual(p["full_name"], google_name)
+        self.assertEqual(p["avatar_url"], google_avatar)
+        self.assertEqual(p["plan"], "starter")
+
+        # Verifikasi dompet default
+        cursor.execute("SELECT name, balance FROM wallets WHERE user_id = ?", (p["id"],))
+        wallet = cursor.fetchone()
+        self.assertIsNotNone(wallet)
+        self.assertEqual(wallet["name"], "Dompet Tunai")
+
+        # Verifikasi kategori
+        cursor.execute("SELECT COUNT(*) FROM categories WHERE user_id = ?", (p["id"],))
+        cat_count = cursor.fetchone()[0]
+        self.assertGreaterEqual(cat_count, 5)
+        conn.close()
+
+        # 3. Test GET /auth/callback rendering
+        cb_page = self.client.get("/auth/callback")
+        self.assertEqual(cb_page.status_code, 200)
+        self.assertIn("Menghubungkan Akun Google", cb_page.text)
+        self.assertIn("/api/auth/oauth-callback", cb_page.text)
+
+        # 4. Test GET /auth/callback dengan direct parameter (server-side redirect)
+        direct_email = f"direct.user.{u_suffix}@gmail.com"
+        direct_res = self.client.get(f"/auth/callback?email={direct_email}&name=Direct+Google+User", follow_redirects=False)
+        self.assertEqual(direct_res.status_code, 302)
+        self.assertEqual(direct_res.headers["location"], "/dashboard")
+        self.assertIn("tatadana_token", direct_res.cookies)
+
+    def test_10_google_login_existing_user_synced(self):
+        """Memastikan login Google berulang untuk user yang sudah ada tidak menduplikasi akun dan mensinkronkan avatar"""
+        u_suffix = uuid.uuid4().hex[:6]
+        google_email = f"citra.{u_suffix}@gmail.com"
+
+        # Login pertama (registrasi murni baru)
+        res1 = self.client.post("/api/auth/oauth-callback", json={
+            "email": google_email,
+            "full_name": "Citra Lestari",
+            "avatar_url": None
+        })
+        self.assertEqual(res1.status_code, 200)
+        self.assertTrue(res1.json()["data"]["is_new"])
+
+        # Login kedua (login kembali dengan avatar baru dari Google)
+        new_avatar = "https://lh3.googleusercontent.com/a/citra-photo.jpg"
+        res2 = self.client.post("/api/auth/oauth-callback", json={
+            "email": google_email,
+            "full_name": "Citra Lestari",
+            "avatar_url": new_avatar
+        })
+        self.assertEqual(res2.status_code, 200)
+        self.assertFalse(res2.json()["data"]["is_new"])
+
+        conn = get_db()
+        cursor = conn.cursor()
+        cursor.execute("SELECT COUNT(*) FROM profiles WHERE email = ?", (google_email,))
+        self.assertEqual(cursor.fetchone()[0], 1)
+        cursor.execute("SELECT avatar_url FROM profiles WHERE email = ?", (google_email,))
+        self.assertEqual(cursor.fetchone()["avatar_url"], new_avatar)
+        conn.close()
+
+        # Reject invalid email
+        bad_res = self.client.post("/api/auth/oauth-callback", json={
+            "email": "not-an-email"
+        })
+        self.assertEqual(bad_res.status_code, 422) # Pydantic validation error
 
 if __name__ == "__main__":
     unittest.main()

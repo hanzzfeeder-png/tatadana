@@ -1,6 +1,6 @@
 import os
 from typing import Optional, Dict, Any
-from fastapi import FastAPI, Request, Depends, HTTPException, status
+from fastapi import FastAPI, Request, Depends, HTTPException, status, Response
 from fastapi.responses import HTMLResponse, RedirectResponse
 from fastapi.staticfiles import StaticFiles
 from fastapi.templating import Jinja2Templates
@@ -8,9 +8,10 @@ from fastapi.templating import Jinja2Templates
 from app.config import settings
 from app.database import init_db
 from app.security import get_current_user_optional, get_current_user, require_admin
+from app.services.auth_service import AuthService
 
 # API Routers
-from app.api.auth import router as auth_router
+from app.api.auth import router as auth_router, OAuthCallbackRequest, oauth_callback
 from app.api.transactions import router as transactions_router
 from app.api.wallets import router as wallets_router
 from app.api.categories import router as categories_router
@@ -42,6 +43,8 @@ app.mount("/static", StaticFiles(directory=STATIC_DIR), name="static")
 
 # Templates
 templates = Jinja2Templates(directory=TEMPLATES_DIR)
+templates.env.globals["supabase_url"] = settings.SUPABASE_URL
+templates.env.globals["supabase_anon_key"] = getattr(settings, "SUPABASE_ANON_KEY", "") or getattr(settings, "SUPABASE_SERVICE_ROLE_KEY", "")
 
 # Register API Routers
 app.include_router(auth_router)
@@ -92,14 +95,59 @@ def page_login(request: Request):
     user = get_current_user_optional(request)
     if user:
         return RedirectResponse(url="/dashboard")
-    return templates.TemplateResponse(request=request, name="auth/login.html", context={})
+    return templates.TemplateResponse(request=request, name="auth/login.html", context={
+        "supabase_url": settings.SUPABASE_URL,
+        "supabase_anon_key": getattr(settings, "SUPABASE_ANON_KEY", "") or getattr(settings, "SUPABASE_SERVICE_ROLE_KEY", "")
+    })
 
 @app.get("/register", response_class=HTMLResponse)
 def page_register(request: Request):
     user = get_current_user_optional(request)
     if user:
         return RedirectResponse(url="/dashboard")
-    return templates.TemplateResponse(request=request, name="auth/register.html", context={})
+    return templates.TemplateResponse(request=request, name="auth/register.html", context={
+        "supabase_url": settings.SUPABASE_URL,
+        "supabase_anon_key": getattr(settings, "SUPABASE_ANON_KEY", "") or getattr(settings, "SUPABASE_SERVICE_ROLE_KEY", "")
+    })
+
+@app.get("/auth/callback", response_class=HTMLResponse)
+def page_auth_callback(
+    request: Request,
+    code: Optional[str] = None,
+    email: Optional[str] = None,
+    name: Optional[str] = None
+):
+    """
+    Rute callback otentikasi Google Login via Supabase Auth OAuth:
+    - Jika parameter email disertakan (misal pengujian otomatis / callback redirect), proses dan pasang cookie sesi.
+    - Jika diakses browser secara normal, tampilkan halaman callback yang mengekstrak sesi Supabase JS dan mengarahkan ke dashboard.
+    """
+    if email:
+        try:
+            res = AuthService.handle_oauth_user(email=email, full_name=name)
+            response = RedirectResponse(url="/dashboard", status_code=302)
+            response.set_cookie(
+                key="tatadana_token",
+                value=res["token"],
+                httponly=True,
+                max_age=72 * 3600,
+                samesite="lax"
+            )
+            return response
+        except ValueError as e:
+            return RedirectResponse(url=f"/login?error={str(e)}", status_code=302)
+
+    return templates.TemplateResponse(request=request, name="auth/callback.html", context={
+        "supabase_url": settings.SUPABASE_URL,
+        "supabase_anon_key": getattr(settings, "SUPABASE_ANON_KEY", "") or getattr(settings, "SUPABASE_SERVICE_ROLE_KEY", "")
+    })
+
+@app.post("/auth/callback")
+def post_auth_callback(req: OAuthCallbackRequest, response: Response):
+    """
+    Alias endpoint POST /auth/callback untuk memproses sesi OAuth langsung.
+    """
+    return oauth_callback(req, response)
 
 @app.get("/verify-otp", response_class=HTMLResponse)
 def page_verify_otp(request: Request):

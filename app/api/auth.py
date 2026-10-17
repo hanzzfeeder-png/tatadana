@@ -135,3 +135,39 @@ def complete_onboarding(req: OnboardingRequest, request: Request):
         return res
     except Exception as e:
         raise HTTPException(status_code=400, detail=str(e))
+
+class OAuthCallbackRequest(BaseModel):
+    email: EmailStr
+    full_name: Optional[str] = None
+    avatar_url: Optional[str] = None
+    supabase_id: Optional[str] = None
+    access_token: Optional[str] = None
+
+@router.post("/oauth-callback")
+def oauth_callback(req: OAuthCallbackRequest, response: Response):
+    """
+    Endpoint pemroses sesi Google Login via Supabase Auth OAuth:
+    Menerima email dan data profil user dari sesi Supabase, memverifikasi atau
+    membuat profil baru di sistem, lalu memasang cookie sesi tatadana_token.
+    """
+    try:
+        res = AuthService.handle_oauth_user(
+            email=req.email,
+            full_name=req.full_name,
+            avatar_url=req.avatar_url,
+            supabase_id=req.supabase_id
+        )
+        response.set_cookie(
+            key="tatadana_token",
+            value=res["token"],
+            httponly=True,
+            max_age=72 * 3600,
+            samesite="lax"
+        )
+        return {
+            "success": True,
+            "data": res,
+            "redirect": "/dashboard"
+        }
+    except ValueError as e:
+        raise HTTPException(status_code=400, detail=str(e))
