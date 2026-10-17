@@ -49,14 +49,19 @@
 {% block scripts %}
 {{ super() }}
 <script>
-    const SUPABASE_URL = "{{ supabase_url or '' }}";
-    const SUPABASE_ANON_KEY = "{{ supabase_anon_key or '' }}";
-    let supabase = null;
-    if (window.supabase && SUPABASE_URL && SUPABASE_ANON_KEY) {
-        supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+    function getSupabase() {
+        if (!window.supabaseClient && window.supabase) {
+            var url = "{{ supabase_url or '' }}";
+            var key = "{{ supabase_anon_key or '' }}";
+            if (url && key) {
+                window.supabaseClient = window.supabase.createClient(url, key);
+            }
+        }
+        return window.supabaseClient;
     }
 
     async function processAuthCallback() {
+        const supabase = getSupabase();
         const statusText = document.getElementById("callback-status-text");
         const errorBox = document.getElementById("callback-error-box");
         const errorMsg = document.getElementById("callback-error-message");

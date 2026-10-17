@@ -1099,9 +1099,9 @@
         const SUPABASE_ANON_KEY = "{{ supabase_anon_key or '' }}";
         const hasOAuthParams = window.location.hash.includes("access_token") || window.location.search.includes("code");
 
-        if (hasOAuthParams && window.supabase && SUPABASE_URL && SUPABASE_ANON_KEY) {
+        if (hasOAuthParams && (window.supabaseClient || window.supabase)) {
             try {
-                const supabaseClient = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+                const supabaseClient = window.supabaseClient || window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
                 supabaseClient.auth.onAuthStateChange(async (event, session) => {
                     if (session && session.user) {
                         try {

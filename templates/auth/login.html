@@ -168,26 +168,30 @@
         if (window.lucide) window.lucide.createIcons();
     }
 
-    const SUPABASE_URL = "{{ supabase_url or '' }}";
-    const SUPABASE_ANON_KEY = "{{ supabase_anon_key or '' }}";
-    let supabase = null;
-    if (window.supabase && SUPABASE_URL && SUPABASE_ANON_KEY) {
-        supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+    function getSupabase() {
+        if (!window.supabaseClient && window.supabase) {
+            var url = "{{ supabase_url or '' }}";
+            var key = "{{ supabase_anon_key or '' }}";
+            if (url && key) {
+                window.supabaseClient = window.supabase.createClient(url, key);
+            }
+        }
+        return window.supabaseClient;
     }
 
     async function handleGoogleLogin() {
+        const supabase = getSupabase();
         try {
-            if (!supabase && window.supabase && SUPABASE_URL && SUPABASE_ANON_KEY) {
-                supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
-            }
-            const { data, error } = await supabase.auth.signInWithOAuth({
-                provider: 'google',
-                options: {
-                    redirectTo: `${window.location.origin}/`,
+            if (supabase) {
+                const { data, error } = await supabase.auth.signInWithOAuth({
+                    provider: 'google',
+                    options: {
+                        redirectTo: `${window.location.origin}/`,
+                    }
+                });
+                if (error) {
+                    console.error("Supabase Google Auth Error:", error);
                 }
-            });
-            if (error) {
-                console.error("Supabase Google Auth Error:", error);
             }
         } catch (error) {
             console.error("Supabase Google Auth Exception:", error);
@@ -213,6 +217,19 @@
         btnSpinner.classList.remove("hidden");
 
         try {
+            // Panggil instance client Supabase jika pengguna login dengan email
+            const supabase = getSupabase();
+            if (supabase && identifier.includes("@")) {
+                try {
+                    await supabase.auth.signInWithPassword({
+                        email: identifier,
+                        password: password
+                    });
+                } catch (sbErr) {
+                    console.error("Supabase signInWithPassword Error:", sbErr);
+                }
+            }
+
             const res = await apiCall("/api/auth/login", {
                 method: "POST",
                 body: JSON.stringify({ identifier, password })

@@ -34,6 +34,15 @@
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <!-- Supabase Auth Client SDK -->
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <script>
+        (function() {
+            var url = "{{ supabase_url or '' }}";
+            var key = "{{ supabase_anon_key or '' }}";
+            if (window.supabase && url && key && !window.supabaseClient) {
+                window.supabaseClient = window.supabase.createClient(url, key);
+            }
+        })();
+    </script>
     <!-- TataDana Custom Styles -->
     <link rel="stylesheet" href="/static/css/app.css">
     {% block head %}{% endblock %}
