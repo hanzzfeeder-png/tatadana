@@ -93,16 +93,22 @@ class TelegramService:
 
     @staticmethod
     def get_bot_status() -> Dict[str, Any]:
+        default_bot_username = getattr(settings, "TELEGRAM_BOT_USERNAME", "TataDanaFinanceBot") or "TataDanaFinanceBot"
         conn = get_db()
         cursor = conn.cursor()
         cursor.execute("SELECT * FROM bot_settings LIMIT 1")
         row = cursor.fetchone()
         conn.close()
+        has_token = bool(TelegramService.get_current_bot_token())
         if not row:
-            return {"is_connected": False, "bot_username": None, "last_tested_at": None}
+            return {
+                "is_connected": has_token,
+                "bot_username": default_bot_username,
+                "last_tested_at": None
+            }
         return {
-            "is_connected": bool(row["is_connected"]),
-            "bot_username": row["bot_username"],
+            "is_connected": bool(row["is_connected"]) or has_token,
+            "bot_username": row["bot_username"] or default_bot_username,
             "webhook_url": row["webhook_url"],
             "last_tested_at": row["last_tested_at"]
         }

@@ -7,6 +7,7 @@ from app.services.report_service import ReportService, STORAGE_DIR
 from app.services.auth_service import AuthService
 from app.services.ai_service import AIService
 from app.security import create_access_token
+from app.config import settings
 
 client = TestClient(app)
 
@@ -673,4 +674,93 @@ class TestAdvancedFeaturesV2:
         assert "viewUserDetail" in web_res.text
         assert "Lihat Profil" in web_res.text
         assert "WA Verified" in web_res.text
+
+    def test_07_telegram_deep_link_flow(self):
+        """
+        Uji Alur Penautan Telegram Berformat Deep-Link:
+        1. POST /api/telegram/generate-pairing-code menghasilkan deep-link berformat:
+           https://t.me/TataDanaFinanceBot?start={link_token}
+        2. Periksa ketersediaan tombol 'Hubungkan ke Telegram' di halaman Pengaturan & Dashboard.
+        3. Simulasi webhook Telegram menerima /start {link_token} dan menautkan akun pengguna secara otomatis.
+        """
+        import uuid
+        import random
+        from app.services.telegram_service import TelegramService
+
+        u_suffix = uuid.uuid4().hex[:6]
+        user_email = f"tg_deeplink_{u_suffix}@tatadana.id"
+        user_phone = f"0818{random.randint(10000000, 99999999)}"
+
+        # 1. Register User
+        reg_res = AuthService.register_user(
+            email=user_email,
+            password="password123",
+            full_name="DeepLink Tester",
+            phone_number=user_phone
+        )
+        user_id = reg_res["user_id"]
+        token = create_access_token({"sub": user_id, "email": user_email, "role": "user", "plan": "starter"})
+        headers = {"Authorization": f"Bearer {token}"}
+
+        # 2. Call generate pairing code
+        gen_res = client.post("/api/telegram/generate-pairing-code", headers=headers)
+        assert gen_res.status_code == 200
+        data = gen_res.json()["data"]
+
+        link_token = data["link_token"]
+        deep_link = data["deep_link"]
+        bot_username = data["bot_username"]
+
+        assert bot_username == "TataDanaFinanceBot"
+        assert link_token.startswith("TD-")
+        expected_deep_link = f"https://t.me/TataDanaFinanceBot?start={link_token}"
+        assert deep_link == expected_deep_link
+
+        # 3. Verify HTML templates contain the deep link buttons and handler functions
+        # A. Settings Page
+        settings_res = client.get("/dashboard/settings?tab=telegram", cookies={"tatadana_token": token})
+        assert settings_res.status_code == 200
+        assert "Hubungkan ke Telegram" in settings_res.text
+        assert "TataDanaFinanceBot" in settings_res.text
+        assert "handleConnectTelegram" in settings_res.text
+        assert "btn-deep-link" in settings_res.text
+
+        # B. Dashboard / Beranda Page
+        beranda_res = client.get("/dashboard", cookies={"tatadana_token": token})
+        assert beranda_res.status_code == 200
+        assert "Hubungkan ke Telegram" in beranda_res.text
+        assert "modal-telegram-connect" in beranda_res.text
+        assert "connectTelegramDeepLink" in beranda_res.text
+        assert "TataDanaFinanceBot" in beranda_res.text
+
+        # 4. Simulate Telegram Webhook sending /start {link_token}
+        tg_user_id = random.randint(300000000, 999999999)
+        webhook_payload = {
+            "update_id": random.randint(1000000, 9999999),
+            "message": {
+                "message_id": 1,
+                "from": {"id": tg_user_id, "username": f"user_dl_{u_suffix}"},
+                "chat": {"id": tg_user_id, "type": "private"},
+                "text": f"/start {link_token}"
+            }
+        }
+
+        hook_res = client.post(
+            "/api/telegram/webhook",
+            json=webhook_payload,
+            headers={"X-Telegram-Bot-Api-Secret-Token": settings.TELEGRAM_WEBHOOK_SECRET}
+        )
+        assert hook_res.status_code == 200
+        hook_data = hook_res.json()
+        assert hook_data["status"] == "success"
+        assert hook_data["action"] == "account_paired"
+        assert hook_data["user_id"] == user_id
+
+        # 5. Verify /api/telegram/status reports user is linked
+        status_res = client.get("/api/telegram/status", headers=headers)
+        assert status_res.status_code == 200
+        st_data = status_res.json()["data"]
+        assert st_data["is_user_linked"] is True
+        assert st_data["user_link"]["telegram_username"] == f"user_dl_{u_suffix}"
+
 

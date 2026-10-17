@@ -49,16 +49,18 @@ def generate_pairing_code(user: dict = Depends(get_current_user)):
     """
     Membuat One-Time Pairing Token (10 menit) untuk menautkan akun web ke bot Telegram.
     Hanya bisa diakses oleh pengguna yang sudah login ke akun miliknya sendiri.
-    Token disimpan dalam bentuk hash SHA-256.
+    Format Deep-link Resmi: https://t.me/TataDanaFinanceBot?start={link_token}
     """
     token_info = TelegramService.generate_pairing_token(user["id"])
     bot_status = TelegramService.get_bot_status()
-    bot_username = bot_status.get("bot_username") or "TataDanaBot"
+    raw_username = bot_status.get("bot_username") or getattr(settings, "TELEGRAM_BOT_USERNAME", "TataDanaFinanceBot") or "TataDanaFinanceBot"
+    bot_username = raw_username.strip().lstrip("@")
     deep_link = f"https://t.me/{bot_username}?start={token_info['token']}"
     return {
         "success": True,
         "data": {
             **token_info,
+            "link_token": token_info["token"],
             "bot_username": bot_username,
             "deep_link": deep_link
         }

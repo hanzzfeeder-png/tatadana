@@ -20,11 +20,16 @@
         <div class="grid grid-cols-1 md:grid-cols-3 gap-4 mt-5">
             <!-- Step 1: Telegram -->
             <div id="step-telegram" class="p-4 rounded-xl border border-slate-200 bg-white flex items-start gap-3">
-                <div class="w-8 h-8 rounded-lg bg-orange-100 text-orange-600 flex items-center justify-center font-bold text-sm shrink-0">1</div>
-                <div>
+                <div id="step-telegram-icon" class="w-8 h-8 rounded-lg bg-sky-100 text-[#229ED9] flex items-center justify-center font-bold text-sm shrink-0">1</div>
+                <div class="flex-1 min-w-0">
                     <h4 class="font-bold text-xs text-slate-900">Hubungkan Telegram</h4>
-                    <p class="text-[11px] text-slate-500 mt-0.5">Catat transaksi semudah chat teman langsung dari HP.</p>
-                    <a href="/dashboard/settings?tab=telegram" class="inline-block mt-2 text-xs font-bold text-orange-600 hover:underline">Hubungkan Sekarang &rarr;</a>
+                    <p class="text-[11px] text-slate-500 mt-0.5">Catat transaksi semudah chat teman ke <b>@TataDanaFinanceBot</b>.</p>
+                    <div id="step-telegram-action" class="mt-2.5">
+                        <button onclick="connectTelegramDeepLink()" id="btn-dashboard-connect-tg" class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-bold bg-[#229ED9] hover:bg-[#1E88E5] text-white shadow-sm shadow-sky-500/20 transition-all">
+                            <i data-lucide="send" class="w-3 h-3"></i>
+                            <span>Hubungkan ke Telegram</span>
+                        </button>
+                    </div>
                 </div>
             </div>
 
@@ -180,6 +185,60 @@
                 </tbody>
             </table>
         </div>
+    <!-- Modal Penautan Telegram dari Dashboard -->
+    <div id="modal-telegram-connect" class="fixed inset-0 bg-slate-900/50 backdrop-blur-sm z-50 hidden items-center justify-center p-4">
+        <div class="bg-white border border-slate-200 rounded-2xl max-w-lg w-full p-6 shadow-2xl relative text-slate-800">
+            <button onclick="closeTelegramConnectModal()" class="absolute top-5 right-5 text-slate-400 hover:text-slate-600 text-xl font-bold">&times;</button>
+            
+            <div class="flex items-center gap-3 pb-3 border-b border-slate-100">
+                <div class="w-10 h-10 rounded-xl bg-[#229ED9] text-white flex items-center justify-center shadow-md shadow-sky-500/20">
+                    <i data-lucide="send" class="w-5 h-5"></i>
+                </div>
+                <div>
+                    <h3 class="font-bold text-base text-slate-900">Hubungkan ke Telegram</h3>
+                    <p class="text-xs text-slate-500">Bot Resmi: <b>@<span id="modal-bot-username">TataDanaFinanceBot</span></b></p>
+                </div>
+            </div>
+
+            <div class="my-5 space-y-4">
+                <div class="p-4 rounded-xl bg-sky-50 border border-sky-200 text-center space-y-2.5">
+                    <span class="text-xs text-sky-900 font-bold block">Klik tombol di bawah untuk diarahkan ke aplikasi Telegram:</span>
+                    <a id="modal-btn-deep-link" href="#" target="_blank" class="inline-flex items-center justify-center gap-2 w-full py-3 rounded-xl text-xs font-bold bg-[#229ED9] hover:bg-[#1E88E5] text-white shadow-lg shadow-sky-500/20 transition-all">
+                        <i data-lucide="send" class="w-4 h-4"></i>
+                        <span>Buka @TataDanaFinanceBot di Telegram</span>
+                    </a>
+                    <div class="pt-1">
+                        <span class="text-[10px] text-slate-400 block mb-0.5">Deep-Link URL Resmi:</span>
+                        <a id="modal-deep-link-preview" href="#" target="_blank" class="text-[11px] font-mono text-sky-700 hover:underline break-all block">https://t.me/TataDanaFinanceBot?start=...</a>
+                    </div>
+                </div>
+
+                <div class="flex items-center justify-between p-3.5 rounded-xl bg-slate-50 border border-slate-200">
+                    <div>
+                        <span class="text-[10px] uppercase font-bold text-slate-400 block">Kode Penautan (Link Token)</span>
+                        <span id="modal-token-display" class="font-mono text-2xl font-black text-slate-800">TD-XXXXXX</span>
+                    </div>
+                    <div class="flex items-center gap-2">
+                        <span id="modal-timer-countdown" class="text-xs font-mono font-bold text-sky-600 bg-white border border-slate-200 px-2.5 py-1 rounded-lg">10:00</span>
+                        <button onclick="copyModalToken()" class="px-3 py-1.5 rounded-lg border border-slate-300 bg-white hover:bg-slate-50 text-slate-700 font-bold text-xs flex items-center gap-1 shadow-sm">
+                            <i data-lucide="copy" class="w-3.5 h-3.5"></i>
+                            <span id="modal-copy-btn-text">Salin</span>
+                        </button>
+                    </div>
+                </div>
+
+                <div class="p-3 bg-amber-50 rounded-xl border border-amber-200/60 text-xs text-amber-800 flex items-start gap-2">
+                    <i data-lucide="info" class="w-4 h-4 text-amber-600 shrink-0 mt-0.5"></i>
+                    <span>Di aplikasi Telegram, tekan tombol <b>START</b> pada bot. Halaman dashboard ini akan otomatis mendeteksi ketika akun Anda sudah tertaut!</span>
+                </div>
+            </div>
+
+            <div class="pt-3 border-t border-slate-100 flex justify-end">
+                <button onclick="closeTelegramConnectModal()" class="px-4 py-2 rounded-xl text-xs font-semibold bg-slate-100 text-slate-700 hover:bg-slate-200">
+                    Tutup
+                </button>
+            </div>
+        </div>
     </div>
 </div>
 {% endblock %}
@@ -215,6 +274,22 @@
                     if (ob.is_telegram_linked) {
                         completedCount++;
                         document.getElementById("step-telegram").classList.add("bg-emerald-50/50", "border-emerald-200");
+                        const actionArea = document.getElementById("step-telegram-action");
+                        if (actionArea) {
+                            actionArea.innerHTML = '<span class="inline-flex items-center gap-1 text-[11px] font-bold text-emerald-700 bg-emerald-100 px-2.5 py-1 rounded-lg">✓ Terhubung</span>';
+                        }
+                    } else {
+                        document.getElementById("step-telegram").classList.remove("bg-emerald-50/50", "border-emerald-200");
+                        const actionArea = document.getElementById("step-telegram-action");
+                        if (actionArea) {
+                            actionArea.innerHTML = `
+                                <button onclick="connectTelegramDeepLink()" id="btn-dashboard-connect-tg" class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-bold bg-[#229ED9] hover:bg-[#1E88E5] text-white shadow-sm shadow-sky-500/20 transition-all">
+                                    <i data-lucide="send" class="w-3 h-3"></i>
+                                    <span>Hubungkan ke Telegram</span>
+                                </button>
+                            `;
+                            if (window.lucide) window.lucide.createIcons();
+                        }
                     }
                     if (ob.has_wallet) {
                         completedCount++;
@@ -382,6 +457,96 @@
             </tr>
             `;
         }).join('');
+    }
+
+    // Modal Penautan Telegram Dashboard
+    let modalCountdownInterval = null;
+    let modalPollInterval = null;
+    let currentModalToken = "";
+
+    async function connectTelegramDeepLink() {
+        try {
+            showToast("Membuat tautan resmi Telegram...", "info");
+            const res = await apiCall("/api/telegram/generate-pairing-code", { method: "POST" });
+            const data = res.data || res;
+            currentModalToken = data.token;
+            const deepLink = data.deep_link || `https://t.me/TataDanaFinanceBot?start=${data.token}`;
+            const botName = data.bot_username || "TataDanaFinanceBot";
+
+            document.getElementById("modal-bot-username").innerText = botName;
+            document.getElementById("modal-token-display").innerText = data.token;
+            document.getElementById("modal-btn-deep-link").href = deepLink;
+            document.getElementById("modal-deep-link-preview").href = deepLink;
+            document.getElementById("modal-deep-link-preview").innerText = deepLink;
+
+            openModal("modal-telegram-connect");
+            if (window.lucide) window.lucide.createIcons();
+
+            // Buka langsung aplikasi Telegram di tab baru
+            window.open(deepLink, "_blank");
+
+            // Countdown timer 10 menit
+            startModalCountdown(data.expires_in_seconds || 600);
+
+            // Auto-polling status sampai terhubung
+            startModalPoll();
+        } catch (err) {
+            showToast(err.message, "error");
+        }
+    }
+
+    function startModalCountdown(seconds) {
+        if (modalCountdownInterval) clearInterval(modalCountdownInterval);
+        let remaining = seconds;
+        const timerEl = document.getElementById("modal-timer-countdown");
+        modalCountdownInterval = setInterval(() => {
+            remaining--;
+            if (remaining <= 0) {
+                clearInterval(modalCountdownInterval);
+                if (timerEl) {
+                    timerEl.innerText = "Kadaluwarsa";
+                    timerEl.classList.add("text-red-600");
+                }
+                return;
+            }
+            const mins = Math.floor(remaining / 60);
+            const secs = remaining % 60;
+            if (timerEl) {
+                timerEl.innerText = `${mins.toString().padStart(2, '0')}:${secs.toString().padStart(2, '0')}`;
+            }
+        }, 1000);
+    }
+
+    function startModalPoll() {
+        if (modalPollInterval) clearInterval(modalPollInterval);
+        modalPollInterval = setInterval(async () => {
+            try {
+                const res = await apiCall("/api/telegram/status", { showToastOnError: false });
+                if (res && res.data && res.data.is_user_linked) {
+                    clearInterval(modalPollInterval);
+                    if (modalCountdownInterval) clearInterval(modalCountdownInterval);
+                    showToast("🎉 Akun Telegram berhasil terhubung!", "success");
+                    closeTelegramConnectModal();
+                    loadDashboardStats();
+                }
+            } catch (_) {}
+        }, 2500);
+    }
+
+    function closeTelegramConnectModal() {
+        if (modalCountdownInterval) clearInterval(modalCountdownInterval);
+        if (modalPollInterval) clearInterval(modalPollInterval);
+        closeModal("modal-telegram-connect");
+    }
+
+    function copyModalToken() {
+        if (!currentModalToken) return;
+        navigator.clipboard.writeText(currentModalToken).then(() => {
+            const btn = document.getElementById("modal-copy-btn-text");
+            if (btn) btn.innerText = "Tersalin! ✓";
+            showToast("Kode penautan berhasil disalin!", "info");
+            setTimeout(() => { if (btn) btn.innerText = "Salin"; }, 2000);
+        });
     }
 
     window.refreshPageData = loadDashboardStats;
