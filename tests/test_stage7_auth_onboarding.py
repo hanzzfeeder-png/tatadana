@@ -230,6 +230,8 @@ class TestStage7AuthAndOnboarding(unittest.TestCase):
         self.assertIn("Ringkasan Pengeluaran", html_login)
         self.assertIn("Lanjutkan dengan Google", html_login)
         self.assertIn("focus:ring-[#F97316]", html_login)
+        self.assertNotIn("Akun Demo Siap Pakai", html_login)
+        self.assertNotIn("fillDemoCredentials", html_login)
 
         # 2. GET /register
         register_page = self.client.get("/register")

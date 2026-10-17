@@ -110,17 +110,6 @@
                 </span>
             </div>
 
-            <!-- Quick Demo Credentials Helper -->
-            <div class="p-3 mb-5 rounded-2xl bg-orange-50/80 border border-orange-200 text-xs text-slate-700">
-                <div class="flex items-center justify-between font-bold text-orange-900 mb-1">
-                    <span class="flex items-center gap-1.5">⚡ Akun Demo Siap Pakai:</span>
-                    <button type="button" onclick="fillDemoCredentials()" class="text-orange-600 hover:underline text-[11px]">Isi Otomatis</button>
-                </div>
-                <div class="text-[11px] text-slate-600 font-mono">
-                    Email: <b>demo@tatadana.id</b> • Pass: <b>demo123456</b>
-                </div>
-            </div>
-
             <!-- Login Form -->
             <form id="login-form" onsubmit="handleLoginSubmit(event)" class="space-y-4">
                 <div>
@@ -177,11 +166,6 @@
             icon.setAttribute("data-lucide", "eye");
         }
         if (window.lucide) window.lucide.createIcons();
-    }
-
-    function fillDemoCredentials() {
-        document.getElementById("login-identifier").value = "demo@tatadana.id";
-        document.getElementById("login-password").value = "demo123456";
     }
 
     function handleGoogleOAuthMock() {
