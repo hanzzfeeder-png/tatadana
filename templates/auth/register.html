@@ -124,15 +124,15 @@
                     </div>
 
                     <div>
-                        <label class="block text-xs font-bold text-slate-700 mb-1">Nomor Handphone (Format Indonesia: 08xx / +62xx)</label>
-                        <input type="tel" id="reg-phone" required placeholder="08123456789 atau +628123456789" class="w-full px-4 py-2.5 rounded-xl border border-slate-200 bg-white text-xs sm:text-sm font-medium text-slate-800 focus:outline-none focus:ring-2 focus:ring-[#F97316] focus:border-[#F97316] transition-all">
-                        <span class="text-[10px] text-slate-400 mt-1 block">Nomor ini diverifikasi untuk penautan bot Telegram & keamanan akun.</span>
+                        <label class="block text-xs font-bold text-slate-700 mb-1">Nomor Handphone (Opsional)</label>
+                        <input type="tel" id="reg-phone" placeholder="08123456789 atau +628123456789" class="w-full px-4 py-2.5 rounded-xl border border-slate-200 bg-white text-xs sm:text-sm font-medium text-slate-800 focus:outline-none focus:ring-2 focus:ring-[#F97316] focus:border-[#F97316] transition-all">
+                        <span class="text-[10px] text-slate-400 mt-1 block">Nomor ini dapat digunakan untuk penautan bot Telegram resmi TataDana.</span>
                     </div>
 
                     <div>
                         <label class="block text-xs font-bold text-slate-700 mb-1">Password</label>
                         <div class="relative">
-                            <input type="password" id="reg-password" required minlength="8" placeholder="Minimal 8 karakter" class="w-full px-4 py-2.5 pr-10 rounded-xl border border-slate-200 bg-white text-xs sm:text-sm font-medium text-slate-800 focus:outline-none focus:ring-2 focus:ring-[#F97316] focus:border-[#F97316] transition-all">
+                            <input type="password" id="reg-password" required minlength="6" placeholder="Minimal 6 karakter" class="w-full px-4 py-2.5 pr-10 rounded-xl border border-slate-200 bg-white text-xs sm:text-sm font-medium text-slate-800 focus:outline-none focus:ring-2 focus:ring-[#F97316] focus:border-[#F97316] transition-all">
                             <button type="button" onclick="togglePasswordVisibility('reg-password', 'eye-icon-reg')" class="absolute inset-y-0 right-0 pr-3 flex items-center text-slate-400 hover:text-slate-600">
                                 <i id="eye-icon-reg" data-lucide="eye" class="w-4 h-4"></i>
                             </button>
@@ -140,7 +140,7 @@
                     </div>
 
                     <button type="submit" id="btn-register-submit" class="btn-primary w-full py-3 rounded-xl text-xs sm:text-sm font-bold shadow-md shadow-orange-500/20 flex items-center justify-center gap-2 mt-2 transition-all">
-                        <span id="btn-register-text">Daftar & Verifikasi OTP</span>
+                        <span id="btn-register-text">Daftar Akun Baru</span>
                         <span id="btn-register-spinner" class="hidden">
                             <svg class="animate-spin h-4 w-4 text-white" fill="none" viewBox="0 0 24 24">
                                 <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
@@ -329,39 +329,44 @@
     }
 
     async function handleGoogleLogin() {
-        if (!supabase) {
-            showToast("Konfigurasi Supabase Auth belum lengkap. Hubungi administrator.", "error");
-            return;
-        }
-        showToast("Mengarahkan ke Google Login...", "info");
         try {
+            if (!supabase && window.supabase && SUPABASE_URL && SUPABASE_ANON_KEY) {
+                supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+            }
             const { data, error } = await supabase.auth.signInWithOAuth({
                 provider: 'google',
                 options: {
-                    redirectTo: window.location.origin + '/auth/callback'
+                    redirectTo: `${window.location.origin}/`,
                 }
             });
             if (error) {
-                showToast(error.message || "Gagal menghubungkan ke Google Login.", "error");
+                console.error("Supabase Google Auth Error:", error);
             }
-        } catch (err) {
-            showToast(err.message || "Terjadi kesalahan saat otentikasi Google.", "error");
+        } catch (error) {
+            console.error("Supabase Google Auth Exception:", error);
         }
     }
 
     async function handleRegisterSubmit(e) {
         e.preventDefault();
-        const full_name = document.getElementById("reg-name").value.trim();
         const email = document.getElementById("reg-email").value.trim();
-        const phone_number = document.getElementById("reg-phone").value.trim();
         const password = document.getElementById("reg-password").value;
+        const fullName = (document.getElementById("reg-name")?.value || "").trim();
+        const phone = (document.getElementById("reg-phone")?.value || "").trim();
 
         const btn = document.getElementById("btn-register-submit");
         const btnText = document.getElementById("btn-register-text");
         const btnSpinner = document.getElementById("btn-register-spinner");
 
-        if (password.length < 8) {
-            showToast("Password minimal 8 karakter.", "error");
+        // Validasi format string email standar (tidak membatasi domain agar menerima email percobaan apa pun)
+        const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+        if (!email || !emailRegex.test(email)) {
+            showToast("Format email tidak valid. Masukkan alamat email yang benar.", "error");
+            return;
+        }
+
+        if (!password || password.length < 6) {
+            showToast("Password minimal 6 karakter.", "error");
             return;
         }
 
@@ -371,24 +376,49 @@
         btnSpinner.classList.remove("hidden");
 
         try {
-            const res = await apiCall("/api/auth/register", {
-                method: "POST",
-                body: JSON.stringify({ full_name, email, phone_number, password })
-            });
+            if (!supabase && window.supabase && SUPABASE_URL && SUPABASE_ANON_KEY) {
+                supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+            }
 
-            currentUserId = res.data.user_id;
-            document.getElementById("otp-user-id").value = currentUserId;
-            document.getElementById("otp-demo-display").innerText = res.data.otp_preview || "123456";
+            let supabaseUserId = null;
+            if (supabase) {
+                const { data, error } = await supabase.auth.signUp({
+                    email: email,
+                    password: password,
+                });
+                if (error) {
+                    console.error("Supabase SignUp Error:", error);
+                } else if (data && data.user) {
+                    supabaseUserId = data.user.id;
+                }
+            }
 
-            // Switch to Step 2 OTP
-            document.getElementById("register-step-1").classList.add("hidden");
-            document.getElementById("register-step-2").classList.remove("hidden");
-            startRegisterCountdown();
-            showToast("Akun berhasil dibuat! Silakan verifikasi OTP WhatsApp Anda.", "info");
+            // Sinkronkan sesi akun ke backend agar profil disiapkan & cookie sesi aktif
+            try {
+                await apiCall("/api/auth/oauth-callback", {
+                    method: "POST",
+                    body: JSON.stringify({
+                        email: email,
+                        full_name: fullName || email.split("@")[0],
+                        supabase_id: supabaseUserId || ""
+                    }),
+                    showToastOnError: false
+                });
+            } catch (syncErr) {
+                console.error("Backend Session Sync Warning:", syncErr);
+            }
+
+            showToast("Pendaftaran berhasil! Mengalihkan ke dashboard...", "success");
+            // Langsung arahkan (redirect) pengguna ke halaman dashboard utama tanpa menunggu verifikasi tautan masuk
+            setTimeout(() => {
+                window.location.href = "/dashboard";
+            }, 400);
+
         } catch (err) {
-            showToast(err.message || "Gagal membuat akun.", "error");
+            console.error("Registration Exception:", err);
+            showToast(err.message || "Terjadi kesalahan saat pendaftaran.", "error");
             btn.disabled = false;
-            btnText.innerText = "Daftar & Verifikasi OTP";
+            btnText.innerText = "Daftar Akun Baru";
             btnSpinner.classList.add("hidden");
         }
     }

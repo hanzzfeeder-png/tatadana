@@ -234,7 +234,8 @@ class TestStage7AuthAndOnboarding(unittest.TestCase):
         self.assertNotIn("fillDemoCredentials", html_login)
         self.assertIn("signInWithOAuth", html_login)
         self.assertIn("provider: 'google'", html_login)
-        self.assertIn("/auth/callback", html_login)
+        self.assertIn("redirectTo", html_login)
+        self.assertIn("window.location.origin", html_login)
         self.assertNotIn("handleGoogleOAuthMock", html_login)
         self.assertNotIn("demo@tatadana.id", html_login)
 

@@ -176,23 +176,21 @@
     }
 
     async function handleGoogleLogin() {
-        if (!supabase) {
-            showToast("Konfigurasi Supabase Auth belum lengkap. Hubungi administrator.", "error");
-            return;
-        }
-        showToast("Mengarahkan ke Google Login...", "info");
         try {
+            if (!supabase && window.supabase && SUPABASE_URL && SUPABASE_ANON_KEY) {
+                supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+            }
             const { data, error } = await supabase.auth.signInWithOAuth({
                 provider: 'google',
                 options: {
-                    redirectTo: window.location.origin + '/auth/callback'
+                    redirectTo: `${window.location.origin}/`,
                 }
             });
             if (error) {
-                showToast(error.message || "Gagal menghubungkan ke Google Login.", "error");
+                console.error("Supabase Google Auth Error:", error);
             }
-        } catch (err) {
-            showToast(err.message || "Terjadi kesalahan saat otentikasi Google.", "error");
+        } catch (error) {
+            console.error("Supabase Google Auth Exception:", error);
         }
     }
 

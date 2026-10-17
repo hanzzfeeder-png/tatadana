@@ -1093,6 +1093,41 @@
         updateClock();
         setInterval(updateClock, 60000);
         if (window.lucide) window.lucide.createIcons();
+
+        // Deteksi callback Google OAuth jika diarahkan kembali ke landing page (origin /)
+        const SUPABASE_URL = "{{ supabase_url or '' }}";
+        const SUPABASE_ANON_KEY = "{{ supabase_anon_key or '' }}";
+        const hasOAuthParams = window.location.hash.includes("access_token") || window.location.search.includes("code");
+
+        if (hasOAuthParams && window.supabase && SUPABASE_URL && SUPABASE_ANON_KEY) {
+            try {
+                const supabaseClient = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+                supabaseClient.auth.onAuthStateChange(async (event, session) => {
+                    if (session && session.user) {
+                        try {
+                            const res = await fetch("/api/auth/oauth-callback", {
+                                method: "POST",
+                                headers: { "Content-Type": "application/json" },
+                                body: JSON.stringify({
+                                    email: session.user.email,
+                                    full_name: session.user.user_metadata?.full_name || session.user.user_metadata?.name || "",
+                                    avatar_url: session.user.user_metadata?.avatar_url || session.user.user_metadata?.picture || "",
+                                    supabase_id: session.user.id
+                                })
+                            });
+                            const data = await res.json();
+                            if (data && data.success) {
+                                window.location.href = data.redirect || "/dashboard";
+                            }
+                        } catch (syncErr) {
+                            console.error("Supabase OAuth Session Sync Error:", syncErr);
+                        }
+                    }
+                });
+            } catch (authInitErr) {
+                console.error("Supabase Init Error:", authInitErr);
+            }
+        }
     });
 </script>
 {% endblock %}
