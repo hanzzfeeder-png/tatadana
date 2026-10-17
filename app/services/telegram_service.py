@@ -130,8 +130,7 @@ class TelegramService:
         except Exception as e:
             print(f"[WARN] Gagal membaca bot_token dari database: {e}")
 
-        # 3. Fallback token bot operasional TataDana
-        return "8571786434:AAHNrWYQu8nVitxrgHB9eH2_xCXeUhbbvJc"
+        return None
 
     @staticmethod
     async def send_telegram_message(chat_id: int, text: str, parse_mode: Optional[str] = "Markdown") -> bool:

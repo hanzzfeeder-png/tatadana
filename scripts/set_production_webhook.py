@@ -28,9 +28,9 @@ if hasattr(sys.stderr, 'reconfigure'):
 # Load .env file
 load_dotenv()
 
-TELEGRAM_BOT_TOKEN = os.getenv("TELEGRAM_BOT_TOKEN", "").strip() or "8571786434:AAHNrWYQu8nVitxrgHB9eH2_xCXeUhbbvJc"
-WEBHOOK_BASE_URL = os.getenv("WEBHOOK_BASE_URL", "").strip() or "https://web-production-282ac.up.railway.app"
-TELEGRAM_WEBHOOK_SECRET = os.getenv("TELEGRAM_WEBHOOK_SECRET", "").strip() or "tatadana-webhook-secret-token-key-2026"
+TELEGRAM_BOT_TOKEN = os.getenv("TELEGRAM_BOT_TOKEN", "").strip()
+WEBHOOK_BASE_URL = os.getenv("WEBHOOK_BASE_URL", "").strip()
+TELEGRAM_WEBHOOK_SECRET = os.getenv("TELEGRAM_WEBHOOK_SECRET", "").strip()
 
 def mask_token(token: str) -> str:
     """Menyamarkan token bot untuk keamanan log."""
